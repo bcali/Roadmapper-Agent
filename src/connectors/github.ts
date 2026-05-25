@@ -58,7 +58,9 @@ export function makeClient(
         throw new Error(`${owner}/${repo}:${path} is not a file (got type=${data.type})`);
       }
       // GitHub contents API returns base64 by default
-      return Buffer.from(data.content, (data.encoding ?? "base64") as BufferEncoding).toString("utf8");
+      return Buffer.from(data.content, (data.encoding ?? "base64") as BufferEncoding).toString(
+        "utf8",
+      );
     },
     async fetchJsonFile<T = unknown>(path: string): Promise<T> {
       const text = await this.fetchTextFile(path);

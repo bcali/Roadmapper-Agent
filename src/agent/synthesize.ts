@@ -22,10 +22,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { loadAgentConfig } from "../lib/config.ts";
-import { type MemoryBundle } from "./memory.ts";
-import { composeSystemPrompt, renderUserMessage } from "./prompts.ts";
-import { ProposedChangesSchema, type ProposedChanges } from "./schema.ts";
 import type { NormalizedSignal } from "../lib/types.ts";
+import type { MemoryBundle } from "./memory.ts";
+import { composeSystemPrompt, renderUserMessage } from "./prompts.ts";
+import { type ProposedChanges, ProposedChangesSchema } from "./schema.ts";
 
 export interface SynthesisInput {
   runDate: string;
@@ -57,7 +57,10 @@ function buildTool(): Anthropic.Tool {
   // zod v4 ships native JSON Schema generation. Anthropic's tool input_schema
   // accepts standard JSON Schema; we strip the $schema root key to keep the
   // wire payload small.
-  const schema = z.toJSONSchema(ProposedChangesSchema, { target: "draft-7" }) as Record<string, unknown>;
+  const schema = z.toJSONSchema(ProposedChangesSchema, { target: "draft-7" }) as Record<
+    string,
+    unknown
+  >;
   delete schema.$schema;
   return {
     name: TOOL_NAME,

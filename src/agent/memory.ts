@@ -48,7 +48,10 @@ export function sliceRecentLessons(
   const sections = splitByH2DateHeading(lessonsMarkdown);
   const kept = sections.filter((s) => s.date && s.date >= cutoff);
   if (kept.length === 0) return "";
-  return kept.map((s) => s.raw).join("\n").trim();
+  return kept
+    .map((s) => s.raw)
+    .join("\n")
+    .trim();
 }
 
 interface LessonSection {
@@ -63,12 +66,13 @@ function splitByH2DateHeading(md: string): LessonSection[] {
   let currentDate: Date | null = null;
   for (const line of lines) {
     const m = /^##\s+(\d{4}-\d{2}-\d{2})(?:\s|$)/.exec(line);
-    if (m) {
+    const captured = m?.[1];
+    if (captured) {
       if (buffer.length && currentDate) {
         out.push({ date: currentDate, raw: buffer.join("\n") });
       }
       buffer = [line];
-      currentDate = parseIsoDateUtc(m[1]!);
+      currentDate = parseIsoDateUtc(captured);
     } else if (currentDate) {
       buffer.push(line);
     }

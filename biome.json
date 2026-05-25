@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.0/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
   "files": {
     "includes": ["src/**/*.ts", "scripts/**/*.ts", "evals/**/*.ts"]
   },
@@ -29,5 +29,17 @@
       "semicolons": "always",
       "trailingCommas": "all"
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.test.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    }
+  ]
 }

@@ -6,9 +6,7 @@ import "dotenv/config";
 const EnvSchema = z.object({
   ANTHROPIC_API_KEY: z.string().startsWith("sk-ant-", "ANTHROPIC_API_KEY must start with sk-ant-"),
   GITHUB_TOKEN: z.string().min(1, "GITHUB_TOKEN is required"),
-  GITHUB_REPO: z
-    .string()
-    .regex(/^[^/]+\/[^/]+$/, "GITHUB_REPO must be in 'owner/repo' form"),
+  GITHUB_REPO: z.string().regex(/^[^/]+\/[^/]+$/, "GITHUB_REPO must be in 'owner/repo' form"),
   GITHUB_BRANCH: z.string().default("main"),
   TIMEZONE: z.string().default("Asia/Bangkok"),
   SLACK_ALERTS_WEBHOOK: z.string().url().optional(),
@@ -42,7 +40,9 @@ export function loadEnv(): Env {
   if (cachedEnv) return cachedEnv;
   const parsed = EnvSchema.safeParse(process.env);
   if (!parsed.success) {
-    const issues = parsed.error.issues.map((i) => `  - ${i.path.join(".")}: ${i.message}`).join("\n");
+    const issues = parsed.error.issues
+      .map((i) => `  - ${i.path.join(".")}: ${i.message}`)
+      .join("\n");
     throw new Error(`Invalid environment configuration:\n${issues}`);
   }
   cachedEnv = parsed.data;
@@ -54,7 +54,9 @@ export function loadAgentConfig(path = "config/agent-config.json"): AgentConfig 
   const raw = readFileSync(resolve(path), "utf8");
   const parsed = AgentConfigSchema.safeParse(JSON.parse(raw));
   if (!parsed.success) {
-    const issues = parsed.error.issues.map((i) => `  - ${i.path.join(".")}: ${i.message}`).join("\n");
+    const issues = parsed.error.issues
+      .map((i) => `  - ${i.path.join(".")}: ${i.message}`)
+      .join("\n");
     throw new Error(`Invalid agent config at ${path}:\n${issues}`);
   }
   cachedConfig = parsed.data;

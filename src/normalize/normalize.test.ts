@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { normalize } from "./normalize.ts";
 import type { Signal } from "../lib/types.ts";
+import { normalize } from "./normalize.ts";
 
 function sig(partial: Partial<Signal> & { text: string; ref: string }): Signal {
   return {

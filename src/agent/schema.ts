@@ -17,24 +17,22 @@
 
 import { z } from "zod";
 
-export const ChangeTypeSchema = z.enum([
-  "blocker",
-  "slip",
-  "scope",
-  "risk",
-  "status",
-  "new",
-]);
+export const ChangeTypeSchema = z.enum(["blocker", "slip", "scope", "risk", "status", "new"]);
 export type ChangeType = z.infer<typeof ChangeTypeSchema>;
 
 export const ChangeSchema = z.object({
-  epic_id: z.string().nullable().describe("Existing epic ID (e.g. 'ORCH-014'), or null if unmapped/new"),
+  epic_id: z
+    .string()
+    .nullable()
+    .describe("Existing epic ID (e.g. 'ORCH-014'), or null if unmapped/new"),
   change_type: ChangeTypeSchema,
   summary: z.string().min(1).max(500).describe("One-sentence human summary of the change"),
   source_refs: z
     .array(z.string())
     .min(1)
-    .describe("Stable refs to source signals (e.g. 'slack:C123:1690000000.0001'). Every change MUST cite at least one."),
+    .describe(
+      "Stable refs to source signals (e.g. 'slack:C123:1690000000.0001'). Every change MUST cite at least one.",
+    ),
   confidence: z.number().min(0).max(1).describe("0.0-1.0 self-assessed confidence"),
   business_case_delta: z
     .string()
@@ -45,7 +43,9 @@ export const ChangeSchema = z.object({
     .string()
     .min(1)
     .max(800)
-    .describe("Brief reasoning chain: which signal(s) → why this change_type → why this confidence"),
+    .describe(
+      "Brief reasoning chain: which signal(s) → why this change_type → why this confidence",
+    ),
 });
 export type Change = z.infer<typeof ChangeSchema>;
 
@@ -57,7 +57,13 @@ export const UnmappedSignalSchema = z.object({
 export const ProposedChangesSchema = z.object({
   run_date: z.string().describe("YYYY-MM-DD in the agent's configured timezone"),
   changes: z.array(ChangeSchema),
-  unmapped_signals: z.array(UnmappedSignalSchema).describe("Signals reviewed but intentionally not turned into a change"),
-  notes: z.string().nullable().optional().describe("Optional run-level notes (e.g. 'no signals after dedup')"),
+  unmapped_signals: z
+    .array(UnmappedSignalSchema)
+    .describe("Signals reviewed but intentionally not turned into a change"),
+  notes: z
+    .string()
+    .nullable()
+    .optional()
+    .describe("Optional run-level notes (e.g. 'no signals after dedup')"),
 });
 export type ProposedChanges = z.infer<typeof ProposedChangesSchema>;

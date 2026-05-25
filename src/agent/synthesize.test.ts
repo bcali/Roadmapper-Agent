@@ -1,14 +1,19 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { describe, expect, it, vi } from "vitest";
-import { synthesize } from "./synthesize.ts";
 import type { MemoryBundle } from "./memory.ts";
+import { synthesize } from "./synthesize.ts";
 
 const memory: MemoryBundle = { index: "", rules: "", lessons: "" };
 
 function clientReturning(content: unknown[]): Anthropic {
   const create = vi.fn().mockResolvedValue({
     content,
-    usage: { input_tokens: 1, output_tokens: 2, cache_read_input_tokens: 3, cache_creation_input_tokens: 4 },
+    usage: {
+      input_tokens: 1,
+      output_tokens: 2,
+      cache_read_input_tokens: 3,
+      cache_creation_input_tokens: 4,
+    },
   });
   return { messages: { create } } as unknown as Anthropic;
 }

@@ -13,11 +13,11 @@
 
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { loadMemory } from "../src/agent/memory.ts";
 import { synthesize } from "../src/agent/synthesize.ts";
-import { normalize } from "../src/normalize/normalize.ts";
 import type { Signal } from "../src/lib/types.ts";
+import { normalize } from "../src/normalize/normalize.ts";
 import { assertProposal, type ExpectedFixture } from "./assertions.ts";
 
 const FIXTURES_DIR = "evals/fixtures";
@@ -39,7 +39,9 @@ describe.skipIf(!hasApiKey)("evals (live Claude API)", () => {
         roadmap: unknown;
         kpis: unknown;
       };
-      const expected = JSON.parse(readFileSync(join(EXPECTED_DIR, `${name}.json`), "utf8")) as ExpectedFixture;
+      const expected = JSON.parse(
+        readFileSync(join(EXPECTED_DIR, `${name}.json`), "utf8"),
+      ) as ExpectedFixture;
       const memory = await loadMemory();
       const { proposal } = await synthesize({
         runDate: fixture.run_date,

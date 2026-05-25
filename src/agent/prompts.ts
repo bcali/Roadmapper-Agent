@@ -15,8 +15,8 @@
 
 import type Anthropic from "@anthropic-ai/sdk";
 import { cachedText, plainText } from "../lib/cache.ts";
-import { sliceRecentLessons, type MemoryBundle } from "./memory.ts";
 import type { NormalizedSignal } from "../lib/types.ts";
+import { type MemoryBundle, sliceRecentLessons } from "./memory.ts";
 
 type SystemContent = Anthropic.TextBlockParam[];
 
@@ -47,9 +47,7 @@ export function composeSystemPrompt(
   const recentLessons = sliceRecentLessons(memory.lessons, lessonLookbackDays, today);
   if (recentLessons) {
     blocks.push(
-      plainText(
-        `## Recent lessons (trailing ${lessonLookbackDays} days)\n\n${recentLessons}`,
-      ),
+      plainText(`## Recent lessons (trailing ${lessonLookbackDays} days)\n\n${recentLessons}`),
     );
   }
   return blocks;

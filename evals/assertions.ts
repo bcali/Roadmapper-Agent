@@ -10,7 +10,7 @@
  * actually have the problem.
  */
 
-import type { ProposedChanges, Change } from "../src/agent/schema.ts";
+import type { Change, ProposedChanges } from "../src/agent/schema.ts";
 
 export interface ChangeExpectation {
   epic_id: string | null;

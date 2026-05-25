@@ -12,12 +12,12 @@
  * memory/prompt-rules.md or evals/**.
  */
 
-import { readFile, readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { loadMemory } from "../src/agent/memory.ts";
 import { synthesize } from "../src/agent/synthesize.ts";
-import { normalize } from "../src/normalize/normalize.ts";
 import type { Signal } from "../src/lib/types.ts";
+import { normalize } from "../src/normalize/normalize.ts";
 import { assertProposal, type ExpectedFixture } from "./assertions.ts";
 
 const FIXTURES_DIR = "evals/fixtures";
@@ -40,7 +40,10 @@ interface EvalRun {
   cacheReadTokens: number;
 }
 
-async function runOne(name: string, memory: Awaited<ReturnType<typeof loadMemory>>): Promise<EvalRun> {
+async function runOne(
+  name: string,
+  memory: Awaited<ReturnType<typeof loadMemory>>,
+): Promise<EvalRun> {
   const fixturePath = join(FIXTURES_DIR, `${name}.json`);
   const expectedPath = join(EXPECTED_DIR, `${name}.json`);
   const fixture = JSON.parse(await readFile(fixturePath, "utf8")) as Fixture;
@@ -84,7 +87,9 @@ async function main(): Promise<void> {
 
   for (const name of fixtureNames) {
     if (cumulativeInput >= MAX_INPUT_TOKENS_BUDGET) {
-      console.error(`[eval] BUDGET EXCEEDED at ${cumulativeInput} input tokens — aborting remaining fixtures`);
+      console.error(
+        `[eval] BUDGET EXCEEDED at ${cumulativeInput} input tokens — aborting remaining fixtures`,
+      );
       process.exitCode = 1;
       break;
     }
@@ -100,7 +105,14 @@ async function main(): Promise<void> {
     } catch (err) {
       console.log("ERROR");
       console.error(err);
-      results.push({ name, pass: false, failures: [String(err)], inputTokens: 0, outputTokens: 0, cacheReadTokens: 0 });
+      results.push({
+        name,
+        pass: false,
+        failures: [String(err)],
+        inputTokens: 0,
+        outputTokens: 0,
+        cacheReadTokens: 0,
+      });
     }
   }
 

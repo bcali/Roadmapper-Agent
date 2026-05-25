@@ -2,8 +2,8 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { writeOutputs } from "./logger.ts";
 import type { ProposedChanges } from "../agent/schema.ts";
+import { writeOutputs } from "./logger.ts";
 
 let tmp: string;
 
@@ -15,7 +15,12 @@ afterEach(async () => {
   await rm(tmp, { recursive: true, force: true });
 });
 
-const usage = { input_tokens: 100, output_tokens: 50, cache_read_input_tokens: 80, cache_creation_input_tokens: 0 };
+const usage = {
+  input_tokens: 100,
+  output_tokens: 50,
+  cache_read_input_tokens: 80,
+  cache_creation_input_tokens: 0,
+};
 
 const proposal: ProposedChanges = {
   run_date: "2026-05-25",

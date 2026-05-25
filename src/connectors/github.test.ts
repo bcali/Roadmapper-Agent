@@ -17,10 +17,12 @@ describe("makeClient", () => {
     });
     const client = makeClient(stub, "bcali", "roadmap-dashboard", "main");
     await expect(client.fetchTextFile("data/claude_summary.md")).resolves.toBe(text);
-    expect(stub.request).toHaveBeenCalledWith(
-      "GET /repos/{owner}/{repo}/contents/{path}",
-      { owner: "bcali", repo: "roadmap-dashboard", path: "data/claude_summary.md", ref: "main" },
-    );
+    expect(stub.request).toHaveBeenCalledWith("GET /repos/{owner}/{repo}/contents/{path}", {
+      owner: "bcali",
+      repo: "roadmap-dashboard",
+      path: "data/claude_summary.md",
+      ref: "main",
+    });
   });
 
   it("parses fetched JSON", async () => {

@@ -14,11 +14,11 @@
 
 import { readFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
-import { writeOutputs } from "../src/audit/logger.ts";
 import { loadMemory } from "../src/agent/memory.ts";
 import { synthesize } from "../src/agent/synthesize.ts";
-import { normalize } from "../src/normalize/normalize.ts";
+import { writeOutputs } from "../src/audit/logger.ts";
 import type { Signal } from "../src/lib/types.ts";
+import { normalize } from "../src/normalize/normalize.ts";
 
 interface Fixture {
   run_date: string;

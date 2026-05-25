@@ -1,0 +1,4 @@
+{
+  "_comment": "Slack channel IDs to monitor. Filled in during Phase 2 (Slack connector).",
+  "channels": []
+}

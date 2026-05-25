@@ -1,0 +1,23 @@
+{
+  "name": "roadmapper-agent",
+  "version": "0.1.0",
+  "description": "Nightly roadmap synthesis agent for Operation Money Tree",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "agent": "tsx src/agent/orchestrator.ts",
+    "dry-run": "tsx scripts/dry-run.ts",
+    "eval": "tsx evals/run-evals.ts",
+    "test": "vitest run --project unit",
+    "test:watch": "vitest --project unit",
+    "typecheck": "tsc --noEmit",
+    "format": "biome format --write",
+    "format:check": "biome format",
+    "lint": "biome check"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

@@ -34,6 +34,7 @@ Thumbs.db
 # Agent runtime data (per-run outputs and feedback)
 data/outputs/*
 !data/outputs/.gitkeep
+data/dry-runs/
 data/evals.jsonl
 data/runs.jsonl
 

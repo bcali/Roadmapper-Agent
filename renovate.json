@@ -1,0 +1,30 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard"],
+  "timezone": "Asia/Bangkok",
+  "schedule": ["before 4am on Monday"],
+  "labels": ["deps"],
+  "rangeStrategy": "bump",
+  "packageRules": [
+    {
+      "description": "Group all @anthropic-ai/* together — they evolve in lockstep.",
+      "matchPackagePatterns": ["^@anthropic-ai/"],
+      "groupName": "anthropic-sdk"
+    },
+    {
+      "description": "Auto-merge non-major dev deps once CI is green.",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true
+    },
+    {
+      "description": "Lockfile maintenance once a week.",
+      "matchUpdateTypes": ["lockFileMaintenance"],
+      "schedule": ["before 4am on Monday"]
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "labels": ["security"],
+    "automerge": false
+  }
+}

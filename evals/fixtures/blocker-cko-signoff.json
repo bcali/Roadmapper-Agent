@@ -1,0 +1,55 @@
+{
+  "run_date": "2026-05-25",
+  "signals": [
+    {
+      "source": "slack",
+      "timestamp_utc": "2026-05-25T03:00:00Z",
+      "author": "U_SEHBA",
+      "text": "Hey @brian — CKO sign-off is still blocked. We're waiting on your approval of the clearing-file format before Checkout.com can countersign. This is now in the way of the Wave 2 onboarding milestone, and the team can't move forward without it. Can we get this resolved today?",
+      "ref": "slack:C0PAYMENTS:1706144400.0001"
+    },
+    {
+      "source": "slack",
+      "timestamp_utc": "2026-05-25T03:30:00Z",
+      "author": "U_BRIAN",
+      "text": "Acknowledged — reviewing the clearing-file template now. Will get back to you by EOD.",
+      "ref": "slack:C0PAYMENTS:1706146200.0002"
+    },
+    {
+      "source": "slack",
+      "timestamp_utc": "2026-05-25T04:00:00Z",
+      "author": "U_NEHA",
+      "text": "Standup notes: FX desk discussed sprint capacity. Nothing concrete to flag.",
+      "ref": "slack:C0FX:1706148000.0003"
+    }
+  ],
+  "roadmap": {
+    "epics": [
+      {
+        "id": "ORCH-014",
+        "title": "Checkout.com (CKO) clearing-file integration",
+        "status": "in_progress",
+        "owner": "Brian Clark",
+        "dependencies": ["WAVE2-ONBOARDING"]
+      },
+      {
+        "id": "WAVE2-ONBOARDING",
+        "title": "Wave 2 partner onboarding",
+        "status": "planned",
+        "owner": "Sehba",
+        "dependencies": ["ORCH-014"]
+      },
+      {
+        "id": "FX-007",
+        "title": "FX desk multi-currency reconciliation",
+        "status": "in_progress",
+        "owner": "Neha"
+      }
+    ]
+  },
+  "kpis": {
+    "wave2_onboarding_target_date": "2026-06-15",
+    "ckos_integrated": 1,
+    "open_blockers": 0
+  }
+}

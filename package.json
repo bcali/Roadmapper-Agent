@@ -18,6 +18,18 @@
     "format:check": "biome format",
     "lint": "biome check"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.98.0",
+    "dotenv": "^17.4.2",
+    "octokit": "^5.0.5",
+    "zod": "^4.4.3",
+    "zod-to-json-schema": "^3.25.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.15",
+    "@types/node": "^22.19.19",
+    "tsx": "^4.22.3",
+    "typescript": "~5.8.0",
+    "vitest": "^4.1.7"
+  }
 }

@@ -1,33 +1,67 @@
 /**
  * Nightly entrypoint. `npm run agent` runs this directly.
  *
- * Phase A flow (Confluence → status.md):
- *   1. Resolve the current ISO week (agent's timezone).
- *   2. Pull raw signal from Confluence (latest weekly status page).
- *   3. Read roadmap.json + kpis.json from the dashboard for synthesis context.
- *   4. extractStatus → status.md markdown.
- *   5. Validate structure; abort the file on hard errors.
- *   6. Commit to bcali/roadmap-dashboard inputs/weekly/<week>/status.md
- *      (no-op if unchanged → daily cron is quiet when nothing moved).
- *   7. Write a local artifact + append run telemetry.
+ * Multi-source, multi-file: for each active producer it collects raw signal,
+ * synthesizes the corresponding weekly input file, validates it, and commits
+ * it to bcali/roadmap-dashboard at inputs/weekly/<ISO-week>/<file>.md
+ * (no-op if unchanged → quiet daily cron). One producer failing (e.g. a
+ * source whose credentials aren't provisioned yet) is logged and skipped; it
+ * never kills the run.
  *
- * Slack/Outlook/Teams sources and the emails/meetings files come in later
- * phases; each will add a signal collector and an extractor, wrapped so one
- * source failing doesn't kill the run.
+ * Active producers:
+ *   - emails   ← Outlook (MS Graph)   → emails.md
+ *   - meetings ← Teams (MS Graph)     → meetings.md
+ * Parked (revive by re-adding to PRODUCERS):
+ *   - status   ← Confluence           → status.md   (source currently dormant)
+ *
+ * DRY_RUN=true generates + validates + writes local artifacts but skips the
+ * dashboard commit.
  */
 
 import { appendRunLog, type RunFileRecord, writeLocalArtifact } from "../audit/logger.ts";
-import { fetchLatestStatusSignal } from "../connectors/confluence.ts";
 import { commitInputFile } from "../connectors/dashboard-writer.ts";
 import { getGitHubClient, getOctokitRequester } from "../connectors/github.ts";
-import { runDateString } from "../lib/clock.ts";
-import { loadAgentConfig, loadEnv } from "../lib/config.ts";
+import type { GraphConfig } from "../connectors/graph.ts";
+import { fetchRecentEmails } from "../connectors/outlook.ts";
+import { fetchRecentTranscripts } from "../connectors/teams.ts";
+import { hoursAgoIso, runDateString } from "../lib/clock.ts";
+import { type AgentConfig, type Env, loadAgentConfig, loadEnv } from "../lib/config.ts";
 import type { Signal } from "../lib/types.ts";
 import { isoWeekOf } from "../lib/week.ts";
 import { normalize } from "../normalize/normalize.ts";
 import { loadMemory } from "./memory.ts";
-import { extractStatus } from "./synthesize.ts";
-import { validateStatusMarkdown } from "./validate.ts";
+import { type ExtractKind, filenameFor } from "./prompts.ts";
+import { extract } from "./synthesize.ts";
+import { validate } from "./validate.ts";
+
+interface Producer {
+  kind: ExtractKind;
+  collect: () => Promise<Signal[]>;
+}
+
+function graphConfig(env: Env): Partial<GraphConfig> {
+  return {
+    tenantId: env.AZURE_TENANT_ID,
+    clientId: env.AZURE_CLIENT_ID,
+    clientSecret: env.AZURE_CLIENT_SECRET,
+    userId: env.GRAPH_USER_ID,
+  };
+}
+
+function buildProducers(env: Env, config: AgentConfig): Producer[] {
+  const sinceIso = hoursAgoIso(config.lookback_days * 24);
+  return [
+    {
+      kind: "emails",
+      collect: () =>
+        fetchRecentEmails(graphConfig(env), { sinceIso, keywords: config.email_keywords }),
+    },
+    {
+      kind: "meetings",
+      collect: () => fetchRecentTranscripts(graphConfig(env), { sinceIso }),
+    },
+  ];
+}
 
 export interface OrchestratorResult {
   week: string;
@@ -38,101 +72,105 @@ export async function runOrchestrator(): Promise<OrchestratorResult> {
   const env = loadEnv();
   const config = loadAgentConfig();
   const week = isoWeekOf(runDateString(env.TIMEZONE));
-
-  console.log(`[agent] start week=${week} tz=${env.TIMEZONE} dashboard=${env.GITHUB_REPO}`);
-
-  // 1. Collect raw signal (Phase A: Confluence only).
-  const signals: Signal[] = [];
-  try {
-    const statusSignal = await fetchLatestStatusSignal({
-      baseUrl: config.confluence.base_url,
-      indexPageId: config.confluence.index_page_id,
-      email: env.ATLASSIAN_EMAIL ?? "",
-      apiToken: env.ATLASSIAN_API_TOKEN ?? "",
-    });
-    if (statusSignal) signals.push(statusSignal);
-  } catch (err) {
-    console.error("[agent] confluence collector failed:", err);
-  }
-
-  const normalized = normalize(signals);
-  console.log(`[agent] signals=${normalized.length} after_normalize`);
-  if (normalized.length === 0) {
-    console.log("[agent] no signal — nothing to synthesize. Exiting cleanly.");
-    return { week, files: [] };
-  }
-
-  // 2. Synthesis context + memory.
-  const github = getGitHubClient();
-  const [roadmap, kpis, memory] = await Promise.all([
-    github.fetchJsonFile(config.dashboard.roadmap),
-    github.fetchJsonFile(config.dashboard.kpis),
-    loadMemory(),
-  ]);
-
-  // 3. Extract status.md.
-  const { markdown, usage } = await extractStatus({
-    week,
-    signals: normalized,
-    roadmap,
-    kpis,
-    memory,
-  });
-
-  // 4. Validate before writing anywhere.
-  const validation = validateStatusMarkdown(markdown);
-  for (const w of validation.warnings) console.warn(`[agent] status.md warning: ${w}`);
-  if (!validation.ok) {
-    console.error(`[agent] status.md failed validation:\n  ${validation.errors.join("\n  ")}`);
-  }
-
-  // 5. Local artifact (always, for the workflow upload / dry-run inspection).
-  await writeLocalArtifact("data/outputs", week, "status.md", markdown);
-
-  // 6. Commit to the dashboard only when valid (and not a dry run).
   const dryRun = process.env.DRY_RUN === "true";
-  const [owner, repo] = env.GITHUB_REPO.split("/", 2) as [string, string];
-  let committed = false;
-  let reason = dryRun ? "skipped-dry-run" : "skipped-invalid";
-  if (validation.ok && dryRun) {
-    console.log(
-      "[agent] DRY_RUN=true — generated + validated status.md but skipping the dashboard commit",
-    );
-  }
-  if (validation.ok && !dryRun) {
-    const result = await commitInputFile({
-      requester: getOctokitRequester(),
-      owner,
-      repo,
-      branch: env.GITHUB_BRANCH,
-      inputsPath: config.dashboard.inputs_path,
-      week,
-      filename: "status.md",
-      content: markdown,
-    });
-    committed = result.committed;
-    reason = result.reason;
-    console.log(`[agent] status.md → ${result.path} (${result.reason})`);
-  }
-
-  const fileRecord: RunFileRecord = {
-    filename: "status.md",
-    committed,
-    reason,
-    validation_errors: validation.errors,
-    validation_warnings: validation.warnings,
-    usage,
-  };
-  await appendRunLog("data/runs.jsonl", {
-    week,
-    signals_ingested: normalized.length,
-    files: [fileRecord],
-  });
 
   console.log(
-    `[agent] done committed=${committed} reason=${reason} cost=$${usage.cost_estimate_usd.toFixed(4)} cache_read=${usage.cache_read_input_tokens}`,
+    `[agent] start week=${week} tz=${env.TIMEZONE} dashboard=${env.GITHUB_REPO} dry_run=${dryRun}`,
   );
-  return { week, files: [fileRecord] };
+
+  // Synthesis context + memory, loaded once (lazily — only if a producer yields signal).
+  let context:
+    | { roadmap: unknown; kpis: unknown; memory: Awaited<ReturnType<typeof loadMemory>> }
+    | undefined;
+  const loadContext = async () => {
+    if (context) return context;
+    const github = getGitHubClient();
+    const [roadmap, kpis, memory] = await Promise.all([
+      github.fetchJsonFile(config.dashboard.roadmap),
+      github.fetchJsonFile(config.dashboard.kpis),
+      loadMemory(),
+    ]);
+    context = { roadmap, kpis, memory };
+    return context;
+  };
+
+  const [owner, repo] = env.GITHUB_REPO.split("/", 2) as [string, string];
+  const files: RunFileRecord[] = [];
+
+  for (const producer of buildProducers(env, config)) {
+    const filename = filenameFor(producer.kind);
+    let signals: Signal[];
+    try {
+      signals = normalize(await producer.collect());
+    } catch (err) {
+      console.error(`[agent] ${producer.kind} collector failed (skipping):`, err);
+      continue;
+    }
+    if (signals.length === 0) {
+      console.log(`[agent] ${producer.kind}: no signal, skipping`);
+      continue;
+    }
+
+    const { roadmap, kpis, memory } = await loadContext();
+    const { markdown, usage } = await extract({
+      kind: producer.kind,
+      week,
+      signals,
+      roadmap,
+      kpis,
+      memory,
+    });
+    const validation = validate(producer.kind, markdown);
+    for (const w of validation.warnings) console.warn(`[agent] ${filename} warning: ${w}`);
+    if (!validation.ok)
+      console.error(`[agent] ${filename} failed validation:\n  ${validation.errors.join("\n  ")}`);
+
+    await writeLocalArtifact("data/outputs", week, filename, markdown);
+
+    let committed = false;
+    let reason = dryRun ? "skipped-dry-run" : "skipped-invalid";
+    if (validation.ok && !dryRun) {
+      const result = await commitInputFile({
+        requester: getOctokitRequester(),
+        owner,
+        repo,
+        branch: env.GITHUB_BRANCH,
+        inputsPath: config.dashboard.inputs_path,
+        week,
+        filename,
+        content: markdown,
+      });
+      committed = result.committed;
+      reason = result.reason;
+      console.log(`[agent] ${filename} → ${result.path} (${result.reason})`);
+    }
+
+    files.push({
+      filename,
+      committed,
+      reason,
+      validation_errors: validation.errors,
+      validation_warnings: validation.warnings,
+      usage,
+    });
+  }
+
+  if (files.length === 0) {
+    console.log("[agent] no producer yielded signal — nothing to do. Exiting cleanly.");
+    return { week, files };
+  }
+
+  await appendRunLog("data/runs.jsonl", {
+    week,
+    signals_ingested: files.length,
+    files,
+  });
+
+  const cost = files.reduce((s, f) => s + f.usage.cost_estimate_usd, 0);
+  console.log(
+    `[agent] done files=${files.length} committed=${files.filter((f) => f.committed).length} cost=$${cost.toFixed(4)}`,
+  );
+  return { week, files };
 }
 
 const isDirectInvocation = process.argv[1]?.endsWith("orchestrator.ts");

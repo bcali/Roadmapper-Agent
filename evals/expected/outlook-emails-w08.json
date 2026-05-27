@@ -1,0 +1,4 @@
+{
+  "must_contain": ["GUARANTEE NOT ACCEPTED", "Week-at-a-Glance", "82.4%"],
+  "must_not_contain": ["[value]", "[YYYY", "[Name", "[Subject"]
+}

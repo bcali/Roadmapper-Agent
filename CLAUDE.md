@@ -20,18 +20,21 @@ It does **not** propose roadmap changes — that's already done by `scripts/anal
 
 ## Where things live
 
-- [src/agent/orchestrator.ts](src/agent/orchestrator.ts) — entrypoint; `npm run agent`. week → pull → extract → validate → commit → no-op.
-- [src/agent/synthesize.ts](src/agent/synthesize.ts) — `extractStatus()`. Load-bearing.
-- [src/agent/prompts.ts](src/agent/prompts.ts) — status prompt (ported from the dashboard's prompt 03); cached vs uncached context split.
-- [src/agent/validate.ts](src/agent/validate.ts) — markdown structure checks; gate before committing.
+- [src/agent/orchestrator.ts](src/agent/orchestrator.ts) — entrypoint; `npm run agent`. Iterates producers: collect → extract → validate → commit → no-op. One source failing is skipped, never fatal.
+- [src/agent/synthesize.ts](src/agent/synthesize.ts) — `extract(kind, …)`. Load-bearing.
+- [src/agent/prompts.ts](src/agent/prompts.ts) — `ExtractKind` registry (status/emails/meetings) ported from prompts 01/02/03; cached vs uncached split.
+- [src/agent/validate.ts](src/agent/validate.ts) — `validate(kind, md)` structure checks; gate before committing.
 - [src/agent/memory.ts](src/agent/memory.ts) — loads `memory/` files into the prompt.
 - [src/lib/anthropic.ts](src/lib/anthropic.ts) — the Claude call wrapper.
 - [src/lib/week.ts](src/lib/week.ts) — ISO week (`2026-W22`), matches the dashboard's folder convention.
-- [src/connectors/confluence.ts](src/connectors/confluence.ts) — Phase A source (Atlassian REST v2).
+- [src/connectors/graph.ts](src/connectors/graph.ts) — MS Graph app-only auth + GET (shared by outlook/teams).
+- [src/connectors/outlook.ts](src/connectors/outlook.ts) — Outlook → emails signals.
+- [src/connectors/teams.ts](src/connectors/teams.ts) — Teams transcripts → meetings signals.
+- [src/connectors/confluence.ts](src/connectors/confluence.ts) — parked source (Atlassian REST v2).
 - [src/connectors/dashboard-writer.ts](src/connectors/dashboard-writer.ts) — commits input files to the dashboard.
 - [src/connectors/github.ts](src/connectors/github.ts) — reads roadmap/kpis; exposes the authenticated requester.
-- [evals/](evals/) — status-extraction regression. Assert structure + fact preservation (epic IDs, key figures), NEVER exact prose.
-- [memory/](memory/) — agent's persistent memory. `prompt-rules.md` is in the cached prompt prefix; `lessons.md` trailing 30 days appended uncached.
+- [evals/](evals/) — extraction regression (status/emails/meetings fixtures). Assert structure + fact preservation, NEVER exact prose.
+- [memory/](memory/) — agent's persistent memory. `prompt-rules.md` cached; `lessons.md` trailing 30 days appended uncached.
 
 ## Conventions
 
@@ -55,10 +58,9 @@ npm run lint
 
 ## Phase plan
 
-- **Phase A (now)**: Confluence → `status.md` → commit → dashboard pipeline. CI + nightly cron + eval wired.
-- **Phase B**: Slack connector → cross-signal.
-- **Phase C**: M365 Outlook → `emails.md` (Azure app + Minor IT admin consent).
-- **Phase D**: M365 Teams transcripts → `meetings.md`.
-- **Phase E**: `weekly-digest.md` aggregation (dashboard's prompt 04) once ≥2 files are produced.
+- **Phase A**: Confluence → `status.md`. Built, then **parked** — Confluence is dormant. `confluence.ts` + the `status` kind remain; revive by re-adding the `status` producer to `orchestrator.ts`.
+- **Phase C+D (now, active producers)**: M365 Outlook → `emails.md` and Teams → `meetings.md`. Connectors built + unit-tested; **activate** by provisioning the Azure AD app + admin consent (`Mail.Read`, `OnlineMeetingTranscript.Read.All`) and setting `AZURE_*` secrets + `GRAPH_USER_ID`. Until then each producer no-ops.
+- **Phase B**: Slack connector → cross-signal (feeds status/notes; no dedicated input file).
+- **Phase E**: `weekly-digest.md` aggregation (dashboard's prompt 04) once ≥2 files are produced; + daily Claude-conversations source.
 
 See [roadmap-agent-implementation-plan.md](roadmap-agent-implementation-plan.md) for the original plan and `.claude/plans/` for the executed pivot plan.

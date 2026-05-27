@@ -1,0 +1,22 @@
+{
+  "kind": "meetings",
+  "week": "2026-W08",
+  "signals": [
+    {
+      "source": "teams",
+      "timestamp_utc": "2026-02-09T10:00:00Z",
+      "author": "Recon Review and Next Steps",
+      "ref": "teams:M1:T1",
+      "text": "Meeting: Recon Review and Next Steps\nAttendees: Brian Clark, Thiruselvam Tholtan (Finance), Minor Hotels finance team. Duration 1h19m.\n\nWEBVTT\n\nBrian: Two settlement report defects are blocking. First, fee currency conversion is showing USD instead of the hotel currency ZAR, which creates a 16x overcharge in the reports. Second, the exchange-rate fields contain timestamps instead of dates, so finance can't audit-verify them.\nFinance (Thiru's team): We don't want hotels managing wallet payouts. Money should flow to hotels automatically — automate daily payouts at 3:00 PM. Each manual payout currently costs $1.50.\nBrian: Agreed — we'll request Juspay automate daily payouts at 3 PM and simplify the hotel report to three fields: transaction amount, total fees, net payout. Detailed fee breakdowns move to a separate analytics report.\nFinance: Reconciliation automation is a prerequisite before we approve scaling beyond beta.\nBrian: Opera integration progress is blocked — Tiru did not attend, OHIP webhook timeline still unknown."
+    }
+  ],
+  "roadmap": {
+    "epics": [
+      { "id": "SCALE-020", "title": "Beta stabilization", "status": "in_progress" },
+      { "id": "OPERA-001", "title": "Opera Cloud / PMS Integration", "status": "in_progress" },
+      { "id": "PAY-050", "title": "Settlement & Reconciliation", "status": "in_progress" },
+      { "id": "LAQ-001", "title": "Local Acquiring", "status": "in_progress" }
+    ]
+  },
+  "kpis": { "avg_cost_per_txn": { "value": "3.50%", "target": "2.1%" } }
+}

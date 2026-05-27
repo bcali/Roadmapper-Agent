@@ -1,0 +1,37 @@
+{
+  "kind": "emails",
+  "week": "2026-W08",
+  "signals": [
+    {
+      "source": "outlook",
+      "timestamp_utc": "2026-02-09T08:00:00Z",
+      "author": "phamotse.mokoena@minor.com",
+      "ref": "outlook:AAA111",
+      "text": "Subject: Re: Testing // Rollout Plan for next week\n\nBrian — reservations are failing to flow into the PMS during rollout testing at the beta properties. Opera is returning \"GUARANTEE NOT ACCEPTED\" errors, which looks like a mismatch between the payment token format and the Opera guarantee code mapping. Payments can't be reconciled for the recent bookings. We need to diagnose root cause urgently before any further ramp-up."
+    },
+    {
+      "source": "outlook",
+      "timestamp_utc": "2026-02-11T09:30:00Z",
+      "author": "sehba.seher@juspay.in",
+      "ref": "outlook:BBB222",
+      "text": "Subject: Re: Payout Report Sync\n\nThe payout report discrepancies between Checkout.com and Juspay are still there. Hotel currency and data-field mismatches are causing reconciliation failures. We should get Checkout and Juspay on a call together to align. This is blocking scale beyond beta."
+    },
+    {
+      "source": "outlook",
+      "timestamp_utc": "2026-02-13T15:00:00Z",
+      "author": "brian.clark@minor.com",
+      "ref": "outlook:CCC333",
+      "text": "Subject: Beta Update — 82% Payment Success Rate\n\nTeam — beta is delivering 82.4% authorization rates, materially above the legacy 62-67% baseline. Decision: proceed with ramp-up beyond beta. Follow-ups on localized acquiring and fraud cost optimization to come."
+    }
+  ],
+  "roadmap": {
+    "epics": [
+      { "id": "SCALE-001", "title": "Hotel Onboarding", "status": "in_progress" },
+      { "id": "SCALE-020", "title": "Beta stabilization", "status": "in_progress" },
+      { "id": "OPERA-001", "title": "Opera Cloud / PMS Integration", "status": "in_progress" },
+      { "id": "FRAUD-001", "title": "Fraud & Decisioning", "status": "in_progress" },
+      { "id": "LAQ-001", "title": "Local Acquiring", "status": "in_progress" }
+    ]
+  },
+  "kpis": { "auth_rate": { "value": "82.4%", "target": "75%" } }
+}

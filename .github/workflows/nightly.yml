@@ -36,13 +36,20 @@ jobs:
 
       - run: npm ci
 
-      - name: Run agent (Confluence → status.md → dashboard)
+      - name: Run agent (sources → weekly input files → dashboard)
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           # PAT scoped to bcali/roadmap-dashboard with contents:read AND contents:write.
           GITHUB_TOKEN: ${{ secrets.ROADMAP_REPO_TOKEN }}
           GITHUB_REPO: ${{ vars.DASHBOARD_REPO || 'bcali/roadmap-dashboard' }}
           GITHUB_BRANCH: ${{ vars.DASHBOARD_BRANCH || 'main' }}
+          # Microsoft 365 (Outlook → emails.md, Teams → meetings.md). Each source
+          # no-ops until its credentials are present.
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          GRAPH_USER_ID: ${{ vars.GRAPH_USER_ID }}
+          # Confluence (parked; revive by re-adding the status producer).
           ATLASSIAN_EMAIL: ${{ secrets.ATLASSIAN_EMAIL }}
           ATLASSIAN_API_TOKEN: ${{ secrets.ATLASSIAN_API_TOKEN }}
           TIMEZONE: ${{ vars.AGENT_TIMEZONE || 'Asia/Bangkok' }}

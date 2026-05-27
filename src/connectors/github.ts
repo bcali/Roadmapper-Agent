@@ -1,9 +1,7 @@
 /**
- * GitHub connector — reads text/JSON files from the dashboard repo
- * (`bcali/roadmap-dashboard` by default).
- *
- * Phase 1 only does reads. The write path (auto-commit roadmap.json) lands
- * in Phase 5 after the accuracy gate clears.
+ * GitHub connector — reads context files from the dashboard repo
+ * (`bcali/roadmap-dashboard`) and exposes the authenticated requester so
+ * dashboard-writer.ts can commit generated input files back.
  */
 
 import { Octokit } from "octokit";
@@ -29,14 +27,22 @@ interface ContentResponse {
 }
 
 let cachedClient: GitHubClient | undefined;
+let cachedRequester: OctokitRequester | undefined;
 
 export function getGitHubClient(): GitHubClient {
   if (cachedClient) return cachedClient;
   const env = loadEnv();
   const [owner, repo] = env.GITHUB_REPO.split("/", 2) as [string, string];
-  const octokit = new Octokit({ auth: env.GITHUB_TOKEN });
-  cachedClient = makeClient(octokit as unknown as OctokitRequester, owner, repo, env.GITHUB_BRANCH);
+  cachedClient = makeClient(getOctokitRequester(), owner, repo, env.GITHUB_BRANCH);
   return cachedClient;
+}
+
+/** The authenticated Octokit requester, for write paths (dashboard-writer). */
+export function getOctokitRequester(): OctokitRequester {
+  if (cachedRequester) return cachedRequester;
+  const env = loadEnv();
+  cachedRequester = new Octokit({ auth: env.GITHUB_TOKEN }) as unknown as OctokitRequester;
+  return cachedRequester;
 }
 
 export function makeClient(
@@ -71,4 +77,5 @@ export function makeClient(
 
 export function resetGitHubClientForTests(): void {
   cachedClient = undefined;
+  cachedRequester = undefined;
 }

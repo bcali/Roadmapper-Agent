@@ -9,10 +9,15 @@ const EnvSchema = z.object({
   GITHUB_TOKEN: z.string().min(1, "GITHUB_TOKEN is required"),
   GITHUB_REPO: z.string().regex(/^[^/]+\/[^/]+$/, "GITHUB_REPO must be in 'owner/repo' form"),
   GITHUB_BRANCH: z.string().default("main"),
-  // Confluence source (Phase A). Optional so unit tests / non-Confluence runs don't require them;
+  // Confluence source (parked). Optional so unit tests / other-source runs don't require them;
   // the connector throws a clear error at call time when they're absent.
   ATLASSIAN_EMAIL: z.string().email().optional(),
   ATLASSIAN_API_TOKEN: z.string().optional(),
+  // Microsoft 365 sources (Outlook + Teams). Optional until the Azure app + admin consent land.
+  AZURE_TENANT_ID: z.string().optional(),
+  AZURE_CLIENT_ID: z.string().optional(),
+  AZURE_CLIENT_SECRET: z.string().optional(),
+  GRAPH_USER_ID: z.string().optional(),
   TIMEZONE: z.string().default("Asia/Bangkok"),
   SLACK_ALERTS_WEBHOOK: z.string().url().optional(),
 });
@@ -29,6 +34,8 @@ const AgentConfigSchema = z.object({
   /** How far back each source pulls raw signal. */
   lookback_days: z.number().positive(),
   lesson_lookback_days: z.number().int().positive(),
+  /** Keyword prefilter for the Outlook connector (relevance trim before synthesis). */
+  email_keywords: z.array(z.string()).default([]),
   dashboard: z.object({
     /** Read for synthesis context. */
     roadmap: z.string(),

@@ -44,8 +44,9 @@ describe("loadAgentConfig", () => {
 
   it("loads the committed agent-config.json", () => {
     const cfg = loadAgentConfig();
-    expect(cfg.confidence_floor_auto_apply).toBeGreaterThan(0);
-    expect(cfg.confidence_floor_auto_apply).toBeLessThanOrEqual(1);
-    expect(cfg.keywords.length).toBeGreaterThan(0);
+    expect(cfg.model).toMatch(/claude/);
+    expect(cfg.dashboard.inputs_path).toBe("inputs/weekly");
+    expect(cfg.confluence.index_page_id).toBeTruthy();
+    expect(cfg.lookback_days).toBeGreaterThan(0);
   });
 });

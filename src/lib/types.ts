@@ -5,7 +5,7 @@
  * Add new fields here when a connector needs to carry additional context.
  */
 
-export type SignalSource = "slack" | "teams" | "outlook" | "claude_summary";
+export type SignalSource = "confluence" | "slack" | "teams" | "outlook" | "claude_summary";
 
 export interface Signal {
   source: SignalSource;

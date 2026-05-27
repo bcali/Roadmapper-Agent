@@ -1,25 +1,18 @@
 {
-  "model": "claude-opus-4-7",
-  "max_tokens": 4000,
-  "lookback_hours": 24,
-  "confidence_floor_auto_apply": 0.75,
-  "accuracy_gate_threshold": 0.90,
-  "accuracy_gate_min_samples": 20,
-  "accuracy_gate_window_days": 14,
+  "model": "claude-sonnet-4-6",
+  "escalation_model": "claude-opus-4-7",
+  "max_tokens": 8000,
+  "thinking_budget_tokens": 4000,
+  "lookback_days": 7,
   "lesson_lookback_days": 30,
-  "keywords": [
-    "money tree",
-    "operation money tree",
-    "juspay",
-    "checkout.com",
-    "airwallex",
-    "blocker",
-    "slip",
-    "at risk"
-  ],
-  "dashboard_paths": {
+  "dashboard": {
     "roadmap": "data/roadmap.json",
     "kpis": "data/kpis.json",
-    "claude_summary": "data/claude_summary.md"
+    "inputs_path": "inputs/weekly"
+  },
+  "confluence": {
+    "base_url": "https://emeapayments.atlassian.net",
+    "index_page_id": "753666",
+    "space_key": "~5c9c53b9266e576700accb2e"
   }
 }

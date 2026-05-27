@@ -5,9 +5,14 @@ import "dotenv/config";
 
 const EnvSchema = z.object({
   ANTHROPIC_API_KEY: z.string().startsWith("sk-ant-", "ANTHROPIC_API_KEY must start with sk-ant-"),
+  // Write target: the dashboard repo (agent commits input files here).
   GITHUB_TOKEN: z.string().min(1, "GITHUB_TOKEN is required"),
   GITHUB_REPO: z.string().regex(/^[^/]+\/[^/]+$/, "GITHUB_REPO must be in 'owner/repo' form"),
   GITHUB_BRANCH: z.string().default("main"),
+  // Confluence source (Phase A). Optional so unit tests / non-Confluence runs don't require them;
+  // the connector throws a clear error at call time when they're absent.
+  ATLASSIAN_EMAIL: z.string().email().optional(),
+  ATLASSIAN_API_TOKEN: z.string().optional(),
   TIMEZONE: z.string().default("Asia/Bangkok"),
   SLACK_ALERTS_WEBHOOK: z.string().url().optional(),
 });
@@ -15,19 +20,27 @@ const EnvSchema = z.object({
 export type Env = z.infer<typeof EnvSchema>;
 
 const AgentConfigSchema = z.object({
+  /** Default extraction model (cheap, high-volume structured work). */
   model: z.string(),
+  /** Reserved for hard cases (e.g. status synthesis) if quality needs it. */
+  escalation_model: z.string(),
   max_tokens: z.number().int().positive(),
-  lookback_hours: z.number().positive(),
-  confidence_floor_auto_apply: z.number().min(0).max(1),
-  accuracy_gate_threshold: z.number().min(0).max(1),
-  accuracy_gate_min_samples: z.number().int().positive(),
-  accuracy_gate_window_days: z.number().int().positive(),
+  thinking_budget_tokens: z.number().int().positive(),
+  /** How far back each source pulls raw signal. */
+  lookback_days: z.number().positive(),
   lesson_lookback_days: z.number().int().positive(),
-  keywords: z.array(z.string()),
-  dashboard_paths: z.object({
+  dashboard: z.object({
+    /** Read for synthesis context. */
     roadmap: z.string(),
     kpis: z.string(),
-    claude_summary: z.string(),
+    /** Where generated weekly input files are committed: <inputs_path>/<week>/<file>.md */
+    inputs_path: z.string(),
+  }),
+  confluence: z.object({
+    base_url: z.string().url(),
+    /** The status-index page whose table links to each weekly status child page. */
+    index_page_id: z.string(),
+    space_key: z.string(),
   }),
 });
 

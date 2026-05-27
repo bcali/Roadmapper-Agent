@@ -1,0 +1,4 @@
+{
+  "must_contain": ["SCALE-030", "62%", "QASR"],
+  "must_not_contain": ["ORCH-014", "[value]", "[YYYY"]
+}

@@ -1,27 +1,25 @@
 /**
- * Run the agent against a local fixture instead of the live GitHub repo.
+ * Run the status extractor against a local fixture instead of live Confluence.
  *
  * Usage:
- *   npm run dry-run -- evals/fixtures/blocker-cko-signoff.json
+ *   npm run dry-run -- evals/fixtures/confluence-status-w08.json
  *
- * The fixture provides {signals, roadmap, kpis, run_date}. Outputs land
- * in data/dry-runs/<basename>/ so they don't pollute data/outputs/ (which
- * the nightly workflow commits to the nightly-outputs branch).
- *
- * Still calls the real Claude API — useful for prompt iteration without
- * hitting GitHub.
+ * Still calls the real Claude API. Writes the generated status.md to
+ * data/dry-runs/<fixture>/ (gitignored) and prints validation + cost — for
+ * prompt iteration without hitting Confluence or committing to the dashboard.
  */
 
 import { readFile } from "node:fs/promises";
-import { basename, join, resolve } from "node:path";
+import { basename } from "node:path";
 import { loadMemory } from "../src/agent/memory.ts";
-import { synthesize } from "../src/agent/synthesize.ts";
-import { writeOutputs } from "../src/audit/logger.ts";
+import { extractStatus } from "../src/agent/synthesize.ts";
+import { validateStatusMarkdown } from "../src/agent/validate.ts";
+import { writeLocalArtifact } from "../src/audit/logger.ts";
 import type { Signal } from "../src/lib/types.ts";
 import { normalize } from "../src/normalize/normalize.ts";
 
 interface Fixture {
-  run_date: string;
+  week: string;
   signals: Signal[];
   roadmap: unknown;
   kpis: unknown;
@@ -35,34 +33,32 @@ async function main(): Promise<void> {
     return;
   }
 
-  const fixture = JSON.parse(await readFile(resolve(fixturePath), "utf8")) as Fixture;
-  const signals = normalize(fixture.signals);
+  const fixture = JSON.parse(await readFile(fixturePath, "utf8")) as Fixture;
   const memory = await loadMemory();
+  console.log(
+    `[dry-run] fixture=${fixturePath} week=${fixture.week} signals=${fixture.signals.length}`,
+  );
 
-  console.log(`[dry-run] fixture=${fixturePath} signals=${signals.length}`);
-
-  const { proposal, usage } = await synthesize({
-    runDate: fixture.run_date,
-    signals,
+  const { markdown, usage } = await extractStatus({
+    week: fixture.week,
+    signals: normalize(fixture.signals),
     roadmap: fixture.roadmap,
     kpis: fixture.kpis,
     memory,
   });
 
-  const outputDir = join("data/dry-runs", basename(fixturePath, ".json"));
-  const { jsonPath, markdownPath } = await writeOutputs({
-    runDate: fixture.run_date,
-    proposal,
-    signals,
-    usage,
-    outputDir,
-    runsLogPath: join(outputDir, "runs.jsonl"),
-  });
+  const validation = validateStatusMarkdown(markdown);
+  const outDir = `data/dry-runs/${basename(fixturePath, ".json")}`;
+  const path = await writeLocalArtifact(outDir, fixture.week, "status.md", markdown);
 
-  console.log(`[dry-run] wrote ${jsonPath}`);
-  console.log(`[dry-run] wrote ${markdownPath}`);
+  console.log(`[dry-run] wrote ${path}`);
   console.log(
-    `[dry-run] changes=${proposal.changes.length} unmapped=${proposal.unmapped_signals.length} tokens_in=${usage.input_tokens} tokens_out=${usage.output_tokens}`,
+    `[dry-run] valid=${validation.ok} errors=${validation.errors.length} warnings=${validation.warnings.length}`,
+  );
+  for (const e of validation.errors) console.log(`    ERROR: ${e}`);
+  for (const w of validation.warnings) console.log(`    warn:  ${w}`);
+  console.log(
+    `[dry-run] cost=$${usage.cost_estimate_usd.toFixed(4)} in=${usage.input_tokens} out=${usage.output_tokens}`,
   );
 }
 

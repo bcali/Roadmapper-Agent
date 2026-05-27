@@ -1,0 +1,32 @@
+{
+  "week": "2026-W08",
+  "signals": [
+    {
+      "source": "confluence",
+      "timestamp_utc": "2026-02-20T00:00:00Z",
+      "author": "confluence-status",
+      "ref": "confluence:page:42270721",
+      "text": "# Weekly Status Update: Payments Modernization\n\n**STATUS: 🟡 YELLOW** — Auth rate dropped to 62% (75% insufficient funds, not platform). Wave 1 scaling starts Monday with QASR UAE.\n\n## KPIs\n| Metric | Value | Target | Trend |\n| --- | --- | --- | --- |\n| Auth Rate | 62% | 82%+ | ⬇️ (was 82.4%) |\n| Hotels on Stack | 2 / 585 | 50 by Q2 | ➡️ (QASR Mon = 3) |\n| Local Acquiring Markets | 0 / 6 | 6 by Q2 | ➡️ |\n\n## Last Week Planned vs Completed\n| Planned Item | Status | Notes |\n| --- | --- | --- |\n| SCALE-010: Migration tracker build | ❌ No progress | MUST complete next week |\n| SCALE-020: Beta stabilization | ✅ Stabilized | Settlement bug appears solved |\n| SCALE-030: Wave 1 kickoff | ✅ Started | QASR UAE going live Monday Feb 24 |\n| FRAUD-010: CKO fraud addendum | ⏳ Waiting | CKO needs to send the addendum |\n| AVC-010: NDA completion | ⏳ Partial | CKO NDA signed. AWX final version to sign |\n\n## Workstream Status Summary\n| # | Workstream | Status | This Week | Business Case |\n| --- | --- | --- | --- | --- |\n| 1 | ORCH-001: Orchestration | 🟢 Complete | AMEX routing fix deployed | $2.23M per 1% auth |\n| 2 | SCALE-001: Hotel Onboarding | 🟡 Yellow | QASR UAE Mon. Migration tracker slipped | Enables all value |\n| 3 | OPERA-001: Opera Integration | 🟢 Green | Pre-read done. Deep dive March | $56K + $1.84M |\n| 4 | FRAUD-001: Fraud & Decisioning | 🟡 Yellow | Waiting on CKO fraud addendum | $258K savings |\n| 7 | AVC-001: AVC Onboarding | 🟡 Yellow | CKO NDA signed. AWX NDA pending | $550K / $80M |\n| 8 | LAQ-001: Local Acquiring | 🟢 Green | UAE on track. Compliance approved | $1.84M / $84.7M |\n| 10 | APM-001: Alt Payment Methods | 🟡 Yellow | PayPal MSA needs review. AMEX routing fixed | Conversion uplift |\n\n## Next Week (Feb 24-28)\n| Priority | Item | Owner | Workstream |\n| --- | --- | --- | --- |\n| P0 | QASR UAE go-live Monday | Brian | SCALE-030 |\n| P0 | Complete migration tracker | Brian | SCALE-010 |\n| P1 | Chase CKO for fraud addendum | Brian | FRAUD-010 |\n\n## Risks / Blockers\n| Risk | Severity | Impact | Mitigation | Age |\n| --- | --- | --- | --- | --- |\n| Auth rate at 62% — optics risk if reported without context | Medium | ExCom may question platform value | Segment decline reasons; 75% insufficient funds | New |\n| SCALE-010 migration tracker slipped | Medium | Cannot plan Wave 1 cadence | P0 next week | New |\n| D$ workshop still overdue | Low | Delays Phase 1 timeline | Juspay onsite first week of March | Carry-forward (3 weeks) |"
+    }
+  ],
+  "roadmap": {
+    "epics": [
+      { "id": "ORCH-001", "title": "Payment Orchestration", "status": "complete" },
+      { "id": "SCALE-001", "title": "Hotel Onboarding", "status": "in_progress" },
+      { "id": "SCALE-010", "title": "Migration tracker", "status": "not_started" },
+      { "id": "SCALE-020", "title": "Beta stabilization", "status": "in_progress" },
+      { "id": "SCALE-030", "title": "Wave 1 kickoff", "status": "in_progress" },
+      { "id": "OPERA-001", "title": "Opera Cloud Integration", "status": "in_progress" },
+      { "id": "FRAUD-001", "title": "Fraud & Decisioning", "status": "in_progress" },
+      { "id": "FRAUD-010", "title": "CKO fraud addendum", "status": "in_progress" },
+      { "id": "AVC-001", "title": "AVC Onboarding", "status": "in_progress" },
+      { "id": "AVC-010", "title": "AVC NDAs", "status": "in_progress" },
+      { "id": "LAQ-001", "title": "Local Acquiring", "status": "in_progress" },
+      { "id": "APM-001", "title": "Alternative Payment Methods", "status": "in_progress" }
+    ]
+  },
+  "kpis": {
+    "auth_rate": { "value": "82.4%", "target": "75%" },
+    "hotels_on_stack": { "value": 2, "target": 50 }
+  }
+}

@@ -1,72 +1,63 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { describe, expect, it, vi } from "vitest";
 import type { MemoryBundle } from "./memory.ts";
-import { synthesize } from "./synthesize.ts";
+import { extractStatus } from "./synthesize.ts";
 
 const memory: MemoryBundle = { index: "", rules: "", lessons: "" };
 
-function clientReturning(content: unknown[]): Anthropic {
-  const create = vi.fn().mockResolvedValue({
-    content,
-    usage: {
-      input_tokens: 1,
-      output_tokens: 2,
-      cache_read_input_tokens: 3,
-      cache_creation_input_tokens: 4,
-    },
-  });
-  return { messages: { create } } as unknown as Anthropic;
+function clientReturning(text: string): Anthropic {
+  const stream = vi.fn(() => ({
+    finalMessage: () =>
+      Promise.resolve({
+        content: [{ type: "text", text }],
+        usage: {
+          input_tokens: 500,
+          output_tokens: 300,
+          cache_read_input_tokens: 400,
+          cache_creation_input_tokens: 0,
+        },
+      }),
+  }));
+  return { messages: { stream } } as unknown as Anthropic;
 }
 
-const validToolUse = {
-  type: "tool_use",
-  name: "emit_proposed_changes",
-  input: {
-    run_date: "2026-05-25",
-    changes: [
+const roadmap = { epics: [{ id: "SCALE-030", title: "Wave 1 kickoff", status: "in_progress" }] };
+const kpis = { auth_rate: 0.62 };
+
+describe("extractStatus", () => {
+  it("returns the model's markdown and usage", async () => {
+    const md = "# Weekly Status Update — 2026-W22\n\n## KPI Data Points\n- Auth Rate: 62%";
+    const result = await extractStatus(
       {
-        epic_id: "ORCH-014",
-        change_type: "blocker",
-        summary: "CKO sign-off blocked",
-        source_refs: ["slack:C1:1"],
-        confidence: 0.86,
-        rationale: "Sehba explicitly named the blocker.",
+        week: "2026-W22",
+        signals: [
+          {
+            source: "confluence",
+            timestamp_utc: "2026-05-27T00:00:00Z",
+            author: "confluence-status",
+            text: "<h1>Status</h1> auth 62%",
+            ref: "confluence:page:42270721",
+          },
+        ],
+        roadmap,
+        kpis,
+        memory,
       },
-    ],
-    unmapped_signals: [],
-  },
-};
-
-describe("synthesize", () => {
-  it("extracts and validates the tool_use input", async () => {
-    const client = clientReturning([validToolUse]);
-    const result = await synthesize(
-      { runDate: "2026-05-25", signals: [], roadmap: {}, kpis: {}, memory },
-      client,
+      clientReturning(md),
     );
-    expect(result.proposal.changes).toHaveLength(1);
-    expect(result.proposal.changes[0]!.epic_id).toBe("ORCH-014");
-    expect(result.usage.cache_read_input_tokens).toBe(3);
+    expect(result.markdown).toContain("# Weekly Status Update");
+    expect(result.usage.cache_read_input_tokens).toBe(400);
   });
 
-  it("throws when the model omits the tool_use", async () => {
-    const client = clientReturning([{ type: "text", text: "I refuse." }]);
-    await expect(
-      synthesize({ runDate: "2026-05-25", signals: [], roadmap: {}, kpis: {}, memory }, client),
-    ).rejects.toThrow(/Expected a tool_use/);
-  });
-
-  it("throws when the tool input fails schema validation", async () => {
-    const bad = {
-      ...validToolUse,
-      input: {
-        ...validToolUse.input,
-        changes: [{ ...validToolUse.input.changes[0], confidence: 2.0 }],
-      },
+  it("passes the roadmap snapshot into the call as cached context", async () => {
+    const client = clientReturning("# Weekly Status Update — 2026-W22\n## KPI\n- x");
+    const streamSpy = client.messages.stream as unknown as ReturnType<typeof vi.fn>;
+    await extractStatus({ week: "2026-W22", signals: [], roadmap, kpis, memory }, client);
+    const callArgs = streamSpy.mock.calls[0]![0] as {
+      system: Array<{ text: string; cache_control?: unknown }>;
     };
-    const client = clientReturning([bad]);
-    await expect(
-      synthesize({ runDate: "2026-05-25", signals: [], roadmap: {}, kpis: {}, memory }, client),
-    ).rejects.toThrow(/schema validation/);
+    const systemBlocks = callArgs.system;
+    const cached = systemBlocks.find((b) => b.cache_control);
+    expect(cached?.text).toContain("SCALE-030"); // roadmap epic id reached the cached context
   });
 });

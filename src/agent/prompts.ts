@@ -1,84 +1,112 @@
 /**
- * System prompt + user message composition.
+ * Prompt composition for the status extractor.
  *
- * Cache placement is deliberate (see src/lib/cache.ts and Anthropic prompt
- * caching docs). The system prompt is split into two cached blocks and one
- * uncached suffix:
+ * Ports the dashboard's prompts/03 output spec, with one deliberate change:
+ * the repo's prompt 03 hardcodes a PAY-/LOY-/ANA- epic list that is now
+ * stale (the roadmap was restructured into 10 workstreams / 51 epics —
+ * ORCH-/SCALE-/OPERA-/FRAUD-/MIT-/DS-/AVC-/LAQ-/FX-/APM-). So instead of a
+ * hardcoded list, we instruct the model to map to whatever epic IDs appear
+ * in the roadmap.json we pass in. That snapshot is the cached context.
  *
- *   1. BASE_SYSTEM         (cached) — always the same; rarely edited
- *   2. memory.rules        (cached) — distilled prompt-rules.md; promoted manually
- *   3. recent lessons      (NOT cached) — last 30 days, changes weekly
- *
- * The user message carries the volatile per-run content (roadmap snapshot,
- * KPIs, tonight's signals).
+ * Cache layout for analyze():
+ *   systemPrompt  = role + output spec + distilled memory rules   (not cached)
+ *   cachedContext = roadmap.json + kpis.json snapshot              (cached)
+ *   userPrompt    = the week + raw source signals + recent lessons (not cached)
  */
 
-import type Anthropic from "@anthropic-ai/sdk";
-import { cachedText, plainText } from "../lib/cache.ts";
 import type { NormalizedSignal } from "../lib/types.ts";
 import { type MemoryBundle, sliceRecentLessons } from "./memory.ts";
 
-type SystemContent = Anthropic.TextBlockParam[];
+const BASE_SYSTEM = `You are a program-management analyst for "Operation Money Tree", Minor Hotels' payments-modernization program. You convert raw weekly source material (Confluence status pages, and later Slack/email/meeting notes) into the program's standard weekly STATUS file.
 
-const BASE_SYSTEM = `You are the roadmap synthesis agent for "Operation Money Tree", Minor Hotels' payments-modernization program. Each night you receive raw signals from Slack, Microsoft Teams meeting transcripts, Outlook emails, and a daily Claude conversation summary, plus the current roadmap state (epics with statuses and business-case values).
+Map everything to the program's CURRENT epics and workstreams. The authoritative epic IDs are in the roadmap snapshot provided in context — use those exact IDs (e.g. ORCH-001, SCALE-030, OPERA-010, FRAUD-010, AVC-010, LAQ-001, APM-020, DS-001, FX-001, MIT-001). Do NOT invent epic IDs or reuse retired ones.
 
-Your job: detect what CHANGED versus the current roadmap and emit a list of proposed updates by calling the \`emit_proposed_changes\` tool.
+Produce a single Markdown document with these sections, in order:
 
-Rules:
-- Bias toward OVER-flagging during the pilot. If a signal plausibly indicates a blocker, slip, scope change, or risk shift, surface it.
-- Every proposed change MUST cite at least one source_ref that triggered it.
-- Map each change to an existing epic_id when possible. If a signal implies a new epic or dependency that has no existing epic_id, set epic_id to null and use change_type "new".
-- Recalculate business_case_delta only when the signals support it; show your reasoning briefly in \`rationale\`.
-- Assign a confidence score 0.0–1.0 per change. Calibrate honestly — an explicit "blocked on X" statement warrants ≥0.7, vague concern language warrants ≤0.5.
-- NEVER invent facts not present in the signals or roadmap.
-- Signals you reviewed but intentionally did NOT turn into a change go into \`unmapped_signals\` with a one-line reason. This is how the morning review catches false negatives.
-- Output ONLY by invoking the emit_proposed_changes tool. Do not write prose.`;
+# Weekly Status Update — <WEEK>
 
-export function composeSystemPrompt(
-  memory: MemoryBundle,
-  lessonLookbackDays: number,
-  today = new Date(),
-): SystemContent {
-  const blocks: SystemContent = [cachedText(BASE_SYSTEM)];
+## Source
+- Page/source, author, last-modified, overall RAG (🟢 on track / 🟡 at risk / 🔴 blocked) + one-line summary.
 
+## KPI Data Points
+- Pull every metric mentioned (auth/payment success rate, avg cost per txn, % hotels on stack, epics complete/in-progress, $ amounts). Preserve exact numbers and any trend arrows.
+
+## Execution Scorecard
+- Table of last week's planned items: | Planned Item | Status (Done/Partial/Not Done) | Workstream (epic id) | Notes |
+- Completion rate + carry-forwards (flag anything carried 2+ consecutive weeks).
+
+## Workstream Status
+- One subsection per affected workstream with its epic id and RAG: what happened, what's next (with owner), blockers/risks.
+
+## Vendor & Contract Status
+- Table: | Vendor | Update | Status | Financial Impact |
+
+## Risk Register
+- Ranked table: | # | Risk | Severity (Critical/High/Medium/Low) | Workstream | Status (new/unchanged/escalated/resolved) | Mitigation |
+
+## Week-over-Week Delta
+- Resolved since last week, new risks, carry-forwards (2+ weeks → escalation), KPI movement, RAG change.
+
+## AI Observations
+- 3-5 sharp observations the downstream roadmap analysis should weigh (patterns, single-points-of-failure, optics risks, opportunities).
+
+Hard rules:
+- Preserve exact percentages, dollar amounts, dates, and owner names.
+- Never invent facts not present in the source material.
+- Every status/risk item should carry an epic id from the roadmap snapshot when one applies.
+- Output ONLY the Markdown document. No preamble, no code fences, no closing commentary.
+- Do NOT leave bracketed [placeholders] — omit a section's rows if there's genuinely nothing to report, but keep the heading.`;
+
+export function buildStatusSystem(memory: MemoryBundle): string {
   const rules = memory.rules.trim();
-  if (rules) blocks.push(cachedText(`## Distilled rules from past feedback\n\n${rules}`));
+  if (!rules) return BASE_SYSTEM;
+  return `${BASE_SYSTEM}\n\n## Distilled rules from past feedback\n\n${rules}`;
+}
 
-  const recentLessons = sliceRecentLessons(memory.lessons, lessonLookbackDays, today);
+/** Stable per-run context (cached): the roadmap + KPI snapshot. */
+export function buildStatusCachedContext(roadmap: unknown, kpis: unknown): string {
+  return [
+    "## Current roadmap snapshot (authoritative epic IDs + statuses)",
+    "```json",
+    JSON.stringify(roadmap, null, 2),
+    "```",
+    "",
+    "## Current KPIs",
+    "```json",
+    JSON.stringify(kpis, null, 2),
+    "```",
+  ].join("\n");
+}
+
+export interface StatusUserInput {
+  week: string;
+  signals: NormalizedSignal[];
+  memory: MemoryBundle;
+  lessonLookbackDays: number;
+  today?: Date;
+}
+
+export function buildStatusUserMessage(input: StatusUserInput): string {
+  const recentLessons = sliceRecentLessons(
+    input.memory.lessons,
+    input.lessonLookbackDays,
+    input.today,
+  );
+  const parts: string[] = [
+    `Generate the STATUS file for week ${input.week}.`,
+    "",
+    "### Raw source material",
+    "```",
+    input.signals.map((s) => `[${s.source}] ${s.ref}\n${s.text}`).join("\n\n---\n\n"),
+    "```",
+  ];
   if (recentLessons) {
-    blocks.push(
-      plainText(`## Recent lessons (trailing ${lessonLookbackDays} days)\n\n${recentLessons}`),
+    parts.push(
+      "",
+      "### Recent lessons (apply these — they came from past corrections)",
+      recentLessons,
     );
   }
-  return blocks;
-}
-
-export interface UserMessageInput {
-  runDate: string;
-  signals: NormalizedSignal[];
-  roadmap: unknown;
-  kpis: unknown;
-}
-
-export function renderUserMessage(input: UserMessageInput): string {
-  return [
-    `Tonight's run: ${input.runDate}`,
-    "",
-    "### Current roadmap snapshot",
-    "```json",
-    JSON.stringify(input.roadmap, null, 2),
-    "```",
-    "",
-    "### Current KPIs",
-    "```json",
-    JSON.stringify(input.kpis, null, 2),
-    "```",
-    "",
-    `### Signals ingested in the last 24h (${input.signals.length} total)`,
-    "```json",
-    JSON.stringify(input.signals, null, 2),
-    "```",
-    "",
-    "Invoke emit_proposed_changes with your analysis.",
-  ].join("\n");
+  parts.push("", "Output the Markdown STATUS document now.");
+  return parts.join("\n");
 }

@@ -2,15 +2,12 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { ProposedChanges } from "../agent/schema.ts";
-import { writeOutputs } from "./logger.ts";
+import { appendRunLog, writeLocalArtifact } from "./logger.ts";
 
 let tmp: string;
-
 beforeEach(async () => {
   tmp = await mkdtemp(join(tmpdir(), "audit-"));
 });
-
 afterEach(async () => {
   await rm(tmp, { recursive: true, force: true });
 });
@@ -20,62 +17,43 @@ const usage = {
   output_tokens: 50,
   cache_read_input_tokens: 80,
   cache_creation_input_tokens: 0,
+  cost_estimate_usd: 0.01,
 };
 
-const proposal: ProposedChanges = {
-  run_date: "2026-05-25",
-  changes: [
-    {
-      epic_id: "ORCH-014",
-      change_type: "blocker",
-      summary: "CKO clearing-file sign-off blocked",
-      source_refs: ["slack:C1:1"],
-      confidence: 0.86,
-      rationale: "Sehba named the blocker explicitly.",
-    },
-  ],
-  unmapped_signals: [{ ref: "slack:C2:5", reason: "Routine status update." }],
-};
-
-describe("writeOutputs", () => {
-  it("writes JSON + markdown + appends a runs.jsonl line", async () => {
-    const outputDir = join(tmp, "outputs");
-    const runsLogPath = join(tmp, "runs.jsonl");
-    const { jsonPath, markdownPath } = await writeOutputs({
-      runDate: "2026-05-25",
-      proposal,
-      signals: [],
-      usage,
-      outputDir,
-      runsLogPath,
-    });
-
-    const jsonBody = JSON.parse(await readFile(jsonPath, "utf8"));
-    expect(jsonBody.changes).toHaveLength(1);
-
-    const md = await readFile(markdownPath, "utf8");
-    expect(md).toContain("## 1. [BLOCKER] ORCH-014 — confidence 0.86");
-    expect(md).toContain("**Sources:** slack:C1:1");
-    expect(md).toContain("Reviewed but not actioned");
-
-    const runsLine = JSON.parse((await readFile(runsLogPath, "utf8")).trim());
-    expect(runsLine.changes_proposed).toBe(1);
-    expect(runsLine.unmapped_signals).toBe(1);
-    expect(runsLine.usage.cache_read_input_tokens).toBe(80);
+describe("writeLocalArtifact", () => {
+  it("writes <dir>/<week>/<filename> and returns the path", async () => {
+    const path = await writeLocalArtifact(
+      join(tmp, "out"),
+      "2026-W22",
+      "status.md",
+      "# Status\nKPI",
+    );
+    expect(path).toMatch(/2026-W22[\\/]status\.md$/);
+    expect(await readFile(path, "utf8")).toBe("# Status\nKPI");
   });
+});
 
-  it("renders an empty-changes audit gracefully", async () => {
-    const outputDir = join(tmp, "outputs");
-    const runsLogPath = join(tmp, "runs.jsonl");
-    const { markdownPath } = await writeOutputs({
-      runDate: "2026-05-25",
-      proposal: { run_date: "2026-05-25", changes: [], unmapped_signals: [] },
-      signals: [],
-      usage,
-      outputDir,
-      runsLogPath,
+describe("appendRunLog", () => {
+  it("appends one JSON line per run", async () => {
+    const logPath = join(tmp, "runs.jsonl");
+    await appendRunLog(logPath, {
+      week: "2026-W22",
+      signals_ingested: 1,
+      files: [
+        {
+          filename: "status.md",
+          committed: true,
+          reason: "updated",
+          validation_errors: [],
+          validation_warnings: [],
+          usage,
+        },
+      ],
     });
-    const md = await readFile(markdownPath, "utf8");
-    expect(md).toContain("_No proposed changes tonight._");
+    const line = JSON.parse((await readFile(logPath, "utf8")).trim());
+    expect(line.week).toBe("2026-W22");
+    expect(line.files[0].committed).toBe(true);
+    expect(line.files[0].usage.cost_estimate_usd).toBe(0.01);
+    expect(line.logged_at).toBeTruthy();
   });
 });

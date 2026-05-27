@@ -2,13 +2,14 @@ name: Nightly
 
 on:
   schedule:
-    # 17:00 UTC = 00:00 Asia/Bangkok. GitHub Actions schedules can drift
-    # up to ~15 min under load; that's acceptable for a nightly batch.
+    # 17:00 UTC = 00:00 Asia/Bangkok. GH Actions schedules can drift ~15 min
+    # under load; fine for a nightly batch. The agent no-ops when no source
+    # signal has changed since the last run.
     - cron: "0 17 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Run the orchestrator but skip the commit to nightly-outputs"
+        description: "Generate + validate status.md but skip the commit to the dashboard repo"
         required: false
         type: boolean
         default: false
@@ -19,11 +20,11 @@ concurrency:
 
 jobs:
   agent:
-    name: Run nightly agent
+    name: Extract → commit weekly inputs
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      contents: write
+      contents: read # the agent writes to the DASHBOARD repo via PAT, not this repo
 
     steps:
       - uses: actions/checkout@v4
@@ -35,52 +36,29 @@ jobs:
 
       - run: npm ci
 
-      - name: Run orchestrator
-        id: run
+      - name: Run agent (Confluence → status.md → dashboard)
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # PAT scoped to bcali/roadmap-dashboard with contents:read AND contents:write.
           GITHUB_TOKEN: ${{ secrets.ROADMAP_REPO_TOKEN }}
           GITHUB_REPO: ${{ vars.DASHBOARD_REPO || 'bcali/roadmap-dashboard' }}
           GITHUB_BRANCH: ${{ vars.DASHBOARD_BRANCH || 'main' }}
+          ATLASSIAN_EMAIL: ${{ secrets.ATLASSIAN_EMAIL }}
+          ATLASSIAN_API_TOKEN: ${{ secrets.ATLASSIAN_API_TOKEN }}
           TIMEZONE: ${{ vars.AGENT_TIMEZONE || 'Asia/Bangkok' }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: npm run agent
 
-      - name: Upload outputs as workflow artifact
+      - name: Upload generated inputs as artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: nightly-outputs-${{ github.run_id }}
-          path: data/outputs/
+          name: weekly-inputs-${{ github.run_id }}
+          path: |
+            data/outputs/
+            data/runs.jsonl
           if-no-files-found: warn
           retention-days: 30
-
-      - name: Commit outputs to nightly-outputs branch
-        if: success() && inputs.dry_run != true
-        run: |
-          set -euo pipefail
-          git config user.name  "roadmap-agent[bot]"
-          git config user.email "roadmap-agent@users.noreply.github.com"
-
-          # Fetch or create the orphan-style branch dedicated to outputs.
-          if git ls-remote --exit-code --heads origin nightly-outputs >/dev/null; then
-            git fetch origin nightly-outputs
-            git checkout nightly-outputs
-            git checkout main -- .gitignore
-          else
-            git checkout --orphan nightly-outputs
-            git rm -rf --cached . >/dev/null 2>&1 || true
-            git clean -fdx -e data/outputs -e .git
-          fi
-
-          mkdir -p outputs
-          cp -r data/outputs/* outputs/ 2>/dev/null || echo "no outputs to copy"
-          git add outputs
-          if git diff --cached --quiet; then
-            echo "No new outputs to commit."
-          else
-            git commit -m "agent: nightly outputs $(date -u +%Y-%m-%d)"
-            git push origin nightly-outputs
-          fi
 
       - name: Notify Slack on failure
         if: failure() && vars.SLACK_ALERTS_WEBHOOK != ''
@@ -88,5 +66,5 @@ jobs:
           WEBHOOK: ${{ secrets.SLACK_ALERTS_WEBHOOK }}
         run: |
           curl -X POST -H "Content-Type: application/json" \
-            -d "{\"text\":\":rotating_light: Roadmap agent nightly run FAILED. Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            -d "{\"text\":\":rotating_light: Roadmap agent nightly FAILED. Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
             "$WEBHOOK"

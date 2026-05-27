@@ -1,13 +1,10 @@
 /**
- * Status extraction — turns raw source signals into the dashboard's weekly
- * `status.md`.
+ * Extraction — turns raw source signals into one of the dashboard's weekly
+ * input files (status.md / emails.md / meetings.md).
  *
- * Replaces the original (now-removed) ProposedChanges synthesis. We emit
- * Markdown directly (matching how the manual Copilot prompt 03 works and how
- * the downstream analyze.ts consumes it) rather than a structured object.
- * The result is structurally validated by validate.ts before it is committed.
- *
- * The Anthropic client is injectable for tests via the analyze() wrapper.
+ * Emits Markdown directly (matching the manual Copilot prompts and how the
+ * downstream analyze.ts consumes the files); validated by validate.ts before
+ * commit. The Anthropic client is injectable via the analyze() wrapper.
  */
 
 import type Anthropic from "@anthropic-ai/sdk";
@@ -15,9 +12,10 @@ import { type AnalyzeUsage, analyze } from "../lib/anthropic.ts";
 import { loadAgentConfig } from "../lib/config.ts";
 import type { NormalizedSignal } from "../lib/types.ts";
 import type { MemoryBundle } from "./memory.ts";
-import { buildStatusCachedContext, buildStatusSystem, buildStatusUserMessage } from "./prompts.ts";
+import { buildCachedContext, buildSystem, buildUserMessage, type ExtractKind } from "./prompts.ts";
 
-export interface ExtractStatusInput {
+export interface ExtractInput {
+  kind: ExtractKind;
   week: string;
   signals: NormalizedSignal[];
   roadmap: unknown;
@@ -26,21 +24,19 @@ export interface ExtractStatusInput {
   today?: Date;
 }
 
-export interface ExtractStatusResult {
+export interface ExtractResult {
   markdown: string;
   usage: AnalyzeUsage;
 }
 
-export async function extractStatus(
-  input: ExtractStatusInput,
-  client?: Anthropic,
-): Promise<ExtractStatusResult> {
+export async function extract(input: ExtractInput, client?: Anthropic): Promise<ExtractResult> {
   const config = loadAgentConfig();
   const { text, usage } = await analyze(
     {
-      systemPrompt: buildStatusSystem(input.memory),
-      cachedContext: buildStatusCachedContext(input.roadmap, input.kpis),
-      userPrompt: buildStatusUserMessage({
+      systemPrompt: buildSystem(input.kind, input.memory),
+      cachedContext: buildCachedContext(input.roadmap, input.kpis),
+      userPrompt: buildUserMessage({
+        kind: input.kind,
         week: input.week,
         signals: input.signals,
         memory: input.memory,

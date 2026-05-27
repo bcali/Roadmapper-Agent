@@ -12,13 +12,16 @@
 import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
 import { loadMemory } from "../src/agent/memory.ts";
-import { extractStatus } from "../src/agent/synthesize.ts";
-import { validateStatusMarkdown } from "../src/agent/validate.ts";
+import type { ExtractKind } from "../src/agent/prompts.ts";
+import { filenameFor } from "../src/agent/prompts.ts";
+import { extract } from "../src/agent/synthesize.ts";
+import { validate } from "../src/agent/validate.ts";
 import { writeLocalArtifact } from "../src/audit/logger.ts";
 import type { Signal } from "../src/lib/types.ts";
 import { normalize } from "../src/normalize/normalize.ts";
 
 interface Fixture {
+  kind: ExtractKind;
   week: string;
   signals: Signal[];
   roadmap: unknown;
@@ -36,10 +39,11 @@ async function main(): Promise<void> {
   const fixture = JSON.parse(await readFile(fixturePath, "utf8")) as Fixture;
   const memory = await loadMemory();
   console.log(
-    `[dry-run] fixture=${fixturePath} week=${fixture.week} signals=${fixture.signals.length}`,
+    `[dry-run] fixture=${fixturePath} kind=${fixture.kind} week=${fixture.week} signals=${fixture.signals.length}`,
   );
 
-  const { markdown, usage } = await extractStatus({
+  const { markdown, usage } = await extract({
+    kind: fixture.kind,
     week: fixture.week,
     signals: normalize(fixture.signals),
     roadmap: fixture.roadmap,
@@ -47,9 +51,9 @@ async function main(): Promise<void> {
     memory,
   });
 
-  const validation = validateStatusMarkdown(markdown);
+  const validation = validate(fixture.kind, markdown);
   const outDir = `data/dry-runs/${basename(fixturePath, ".json")}`;
-  const path = await writeLocalArtifact(outDir, fixture.week, "status.md", markdown);
+  const path = await writeLocalArtifact(outDir, fixture.week, filenameFor(fixture.kind), markdown);
 
   console.log(`[dry-run] wrote ${path}`);
   console.log(

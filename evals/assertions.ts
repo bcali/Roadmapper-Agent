@@ -10,7 +10,8 @@
  *    vendors)
  */
 
-import { validateStatusMarkdown } from "../src/agent/validate.ts";
+import type { ExtractKind } from "../src/agent/prompts.ts";
+import { validate } from "../src/agent/validate.ts";
 
 export interface ExpectedStatus {
   /** Substrings that MUST appear (epic IDs, preserved figures). */
@@ -24,10 +25,14 @@ export interface AssertionResult {
   failures: string[];
 }
 
-export function assertStatusMarkdown(md: string, expected: ExpectedStatus): AssertionResult {
+export function assertMarkdown(
+  kind: ExtractKind,
+  md: string,
+  expected: ExpectedStatus,
+): AssertionResult {
   const failures: string[] = [];
 
-  const validation = validateStatusMarkdown(md);
+  const validation = validate(kind, md);
   if (!validation.ok) {
     failures.push(`failed structural validation: ${validation.errors.join("; ")}`);
   }

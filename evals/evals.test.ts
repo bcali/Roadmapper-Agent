@@ -10,10 +10,11 @@ import { readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadMemory } from "../src/agent/memory.ts";
-import { extractStatus } from "../src/agent/synthesize.ts";
+import type { ExtractKind } from "../src/agent/prompts.ts";
+import { extract } from "../src/agent/synthesize.ts";
 import type { Signal } from "../src/lib/types.ts";
 import { normalize } from "../src/normalize/normalize.ts";
-import { assertStatusMarkdown, type ExpectedStatus } from "./assertions.ts";
+import { assertMarkdown, type ExpectedStatus } from "./assertions.ts";
 
 const FIXTURES_DIR = "evals/fixtures";
 const EXPECTED_DIR = "evals/expected";
@@ -29,6 +30,7 @@ describe.skipIf(!hasApiKey)("status evals (live Claude API)", () => {
   for (const name of fixtureNames) {
     it(name, async () => {
       const fixture = JSON.parse(readFileSync(join(FIXTURES_DIR, `${name}.json`), "utf8")) as {
+        kind: ExtractKind;
         week: string;
         signals: Signal[];
         roadmap: unknown;
@@ -38,14 +40,15 @@ describe.skipIf(!hasApiKey)("status evals (live Claude API)", () => {
         readFileSync(join(EXPECTED_DIR, `${name}.json`), "utf8"),
       ) as ExpectedStatus;
       const memory = await loadMemory();
-      const { markdown } = await extractStatus({
+      const { markdown } = await extract({
+        kind: fixture.kind,
         week: fixture.week,
         signals: normalize(fixture.signals),
         roadmap: fixture.roadmap,
         kpis: fixture.kpis,
         memory,
       });
-      const result = assertStatusMarkdown(markdown, expected);
+      const result = assertMarkdown(fixture.kind, markdown, expected);
       if (!result.pass)
         throw new Error(`Eval failures:\n${result.failures.map((f) => `  - ${f}`).join("\n")}`);
       expect(result.pass).toBe(true);

@@ -1,15 +1,15 @@
 /**
  * Structural validation for generated weekly input markdown.
  *
- * The agent produces markdown (not a structured object), so validation is
+ * The agent emits markdown (not a structured object), so validation is
  * string-level — mirroring the dashboard's scripts/process-inputs.ts
- * `validateTemplate()` plus the section spec from prompts/03. We run this
- * BEFORE committing to the dashboard so we never push a file that the
- * downstream pipeline would warn on (unfilled placeholders, missing KPI
- * section, empty template).
+ * `validateTemplate()` plus the per-kind section spec. Run BEFORE committing
+ * so we never push a file the downstream pipeline would warn on.
  *
  * `errors` block the commit; `warnings` are logged but allowed.
  */
+
+import type { ExtractKind } from "./prompts.ts";
 
 export interface ValidationResult {
   ok: boolean;
@@ -25,7 +25,17 @@ const PLACEHOLDER_RE = /\[[^\]]*?(YYYY|Name|Date|Subject|value|val|item|count|ar
 
 const MIN_CONTENT_CHARS = 200;
 
-export function validateStatusMarkdown(md: string): ValidationResult {
+/** Per-kind "must carry at least one of these" signals (hard error if absent). */
+const REQUIRED_ANY: Record<ExtractKind, { label: string; re: RegExp }> = {
+  status: { label: "KPI / auth-rate", re: /KPI|Payment Success|Auth Rate|payment_success/i },
+  emails: { label: "email-summary", re: /Email Summary|Week-at-a-Glance|Action Items|Relates to/i },
+  meetings: {
+    label: "meeting-summary",
+    re: /Meeting Summary|Decisions Made|Decisions Log|Action Items/i,
+  },
+};
+
+export function validate(kind: ExtractKind, md: string): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
   const text = md.trim();
@@ -41,19 +51,17 @@ export function validateStatusMarkdown(md: string): ValidationResult {
     );
   }
 
-  // process-inputs.ts requires a KPI signal in status files.
-  if (!/KPI|Payment Success|Auth Rate|payment_success/i.test(text)) {
-    errors.push("Missing a KPI / auth-rate section (status files must carry KPI signal)");
-  }
-
   if (!/^#\s/m.test(text)) {
-    errors.push("No top-level heading (expected '# Weekly Status Update …')");
+    errors.push("No top-level heading");
   }
 
-  // Soft expectations from the prompt-03 output template.
-  if (!/risk/i.test(text)) warnings.push("No Risk/Blocker section found");
+  const required = REQUIRED_ANY[kind];
+  if (!required.re.test(text)) {
+    errors.push(`Missing a ${required.label} section expected for a ${kind} file`);
+  }
+
   if (!EPIC_ID_RE.test(text)) {
-    warnings.push("No epic IDs (e.g. PAY-010 / SCALE-030) — status not mapped to workstreams");
+    warnings.push("No epic IDs (e.g. PAY-010 / SCALE-030) — content not mapped to workstreams");
   }
 
   return { ok: errors.length === 0, errors, warnings };

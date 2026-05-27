@@ -15,16 +15,18 @@
 import { readdir, readFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { loadMemory } from "../src/agent/memory.ts";
-import { extractStatus } from "../src/agent/synthesize.ts";
+import type { ExtractKind } from "../src/agent/prompts.ts";
+import { extract } from "../src/agent/synthesize.ts";
 import type { Signal } from "../src/lib/types.ts";
 import { normalize } from "../src/normalize/normalize.ts";
-import { assertStatusMarkdown, type ExpectedStatus } from "./assertions.ts";
+import { assertMarkdown, type ExpectedStatus } from "./assertions.ts";
 
 const FIXTURES_DIR = "evals/fixtures";
 const EXPECTED_DIR = "evals/expected";
 const MAX_INPUT_TOKENS_BUDGET = 200_000; // ~ $1 at Opus pricing
 
 interface Fixture {
+  kind: ExtractKind;
   week: string;
   signals: Signal[];
   roadmap: unknown;
@@ -62,7 +64,8 @@ async function main(): Promise<void> {
       const expected = JSON.parse(
         await readFile(join(EXPECTED_DIR, `${name}.json`), "utf8"),
       ) as ExpectedStatus;
-      const { markdown, usage } = await extractStatus({
+      const { markdown, usage } = await extract({
+        kind: fixture.kind,
         week: fixture.week,
         signals: normalize(fixture.signals),
         roadmap: fixture.roadmap,
@@ -71,7 +74,7 @@ async function main(): Promise<void> {
       });
       cumulativeInput += usage.input_tokens;
       totalCost += usage.cost_estimate_usd;
-      const result = assertStatusMarkdown(markdown, expected);
+      const result = assertMarkdown(fixture.kind, markdown, expected);
       if (result.pass) {
         pass++;
         console.log(

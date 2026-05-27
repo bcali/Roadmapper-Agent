@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { validateStatusMarkdown } from "./validate.ts";
+import { validate } from "./validate.ts";
+
+const validateStatusMarkdown = (md: string) => validate("status", md);
 
 const GOOD = `# Weekly Status Update — 2026-W22
 

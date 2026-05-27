@@ -1,7 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { describe, expect, it, vi } from "vitest";
 import type { MemoryBundle } from "./memory.ts";
-import { extractStatus } from "./synthesize.ts";
+import { extract } from "./synthesize.ts";
 
 const memory: MemoryBundle = { index: "", rules: "", lessons: "" };
 
@@ -24,11 +24,12 @@ function clientReturning(text: string): Anthropic {
 const roadmap = { epics: [{ id: "SCALE-030", title: "Wave 1 kickoff", status: "in_progress" }] };
 const kpis = { auth_rate: 0.62 };
 
-describe("extractStatus", () => {
+describe("extract", () => {
   it("returns the model's markdown and usage", async () => {
     const md = "# Weekly Status Update — 2026-W22\n\n## KPI Data Points\n- Auth Rate: 62%";
-    const result = await extractStatus(
+    const result = await extract(
       {
+        kind: "status",
         week: "2026-W22",
         signals: [
           {
@@ -52,7 +53,7 @@ describe("extractStatus", () => {
   it("passes the roadmap snapshot into the call as cached context", async () => {
     const client = clientReturning("# Weekly Status Update — 2026-W22\n## KPI\n- x");
     const streamSpy = client.messages.stream as unknown as ReturnType<typeof vi.fn>;
-    await extractStatus({ week: "2026-W22", signals: [], roadmap, kpis, memory }, client);
+    await extract({ kind: "status", week: "2026-W22", signals: [], roadmap, kpis, memory }, client);
     const callArgs = streamSpy.mock.calls[0]![0] as {
       system: Array<{ text: string; cache_control?: unknown }>;
     };

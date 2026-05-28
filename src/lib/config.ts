@@ -18,6 +18,9 @@ const EnvSchema = z.object({
   AZURE_CLIENT_ID: z.string().optional(),
   AZURE_CLIENT_SECRET: z.string().optional(),
   GRAPH_USER_ID: z.string().optional(),
+  // Slack source (notes.md). Optional until a bot token + tracked channels are set;
+  // the connector throws a clear error at call time when absent.
+  SLACK_BOT_TOKEN: z.string().optional(),
   TIMEZONE: z.string().default("Asia/Bangkok"),
   SLACK_ALERTS_WEBHOOK: z.string().url().optional(),
 });
@@ -36,6 +39,14 @@ const AgentConfigSchema = z.object({
   lesson_lookback_days: z.number().int().positive(),
   /** Keyword prefilter for the Outlook connector (relevance trim before synthesis). */
   email_keywords: z.array(z.string()).default([]),
+  /** Slack source (notes.md): which channels to read + optional relevance prefilter. */
+  slack: z
+    .object({
+      /** Channel IDs (e.g. C0123ABCD) the bot is a member of. Empty → producer no-ops. */
+      channels: z.array(z.string()).default([]),
+      keywords: z.array(z.string()).default([]),
+    })
+    .default({ channels: [], keywords: [] }),
   dashboard: z.object({
     /** Read for synthesis context. */
     roadmap: z.string(),

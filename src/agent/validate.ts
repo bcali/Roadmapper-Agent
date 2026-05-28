@@ -33,6 +33,10 @@ const REQUIRED_ANY: Record<ExtractKind, { label: string; re: RegExp }> = {
     label: "meeting-summary",
     re: /Meeting Summary|Decisions Made|Decisions Log|Action Items/i,
   },
+  notes: {
+    label: "team-notes",
+    re: /Team Notes|Decisions|Blockers|Action Items|Status Signals/i,
+  },
 };
 
 export function validate(kind: ExtractKind, md: string): ValidationResult {

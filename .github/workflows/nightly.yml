@@ -49,6 +49,9 @@ jobs:
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           GRAPH_USER_ID: ${{ vars.GRAPH_USER_ID }}
+          # Slack (tracked channels → notes.md). No-ops until a bot token is set
+          # AND config/agent-config.json slack.channels is non-empty.
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           # Confluence (parked; revive by re-adding the status producer).
           ATLASSIAN_EMAIL: ${{ secrets.ATLASSIAN_EMAIL }}
           ATLASSIAN_API_TOKEN: ${{ secrets.ATLASSIAN_API_TOKEN }}

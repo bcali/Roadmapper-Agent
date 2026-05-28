@@ -22,7 +22,7 @@ It does **not** propose roadmap changes — that's already done by `scripts/anal
 
 - [src/agent/orchestrator.ts](src/agent/orchestrator.ts) — entrypoint; `npm run agent`. Iterates producers: collect → extract → validate → commit → no-op. One source failing is skipped, never fatal.
 - [src/agent/synthesize.ts](src/agent/synthesize.ts) — `extract(kind, …)`. Load-bearing.
-- [src/agent/prompts.ts](src/agent/prompts.ts) — `ExtractKind` registry (status/emails/meetings) ported from prompts 01/02/03; cached vs uncached split.
+- [src/agent/prompts.ts](src/agent/prompts.ts) — `ExtractKind` registry (status/emails/meetings/notes) ported from prompts 01/02/03 (+ notes, the dashboard's catch-all input type, for Slack); cached vs uncached split.
 - [src/agent/validate.ts](src/agent/validate.ts) — `validate(kind, md)` structure checks; gate before committing.
 - [src/agent/memory.ts](src/agent/memory.ts) — loads `memory/` files into the prompt.
 - [src/lib/anthropic.ts](src/lib/anthropic.ts) — the Claude call wrapper.
@@ -30,6 +30,7 @@ It does **not** propose roadmap changes — that's already done by `scripts/anal
 - [src/connectors/graph.ts](src/connectors/graph.ts) — MS Graph app-only auth + GET (shared by outlook/teams).
 - [src/connectors/outlook.ts](src/connectors/outlook.ts) — Outlook → emails signals.
 - [src/connectors/teams.ts](src/connectors/teams.ts) — Teams transcripts → meetings signals.
+- [src/connectors/slack.ts](src/connectors/slack.ts) — Slack tracked channels → notes signals (Web API `conversations.history`).
 - [src/connectors/confluence.ts](src/connectors/confluence.ts) — parked source (Atlassian REST v2).
 - [src/connectors/dashboard-writer.ts](src/connectors/dashboard-writer.ts) — commits input files to the dashboard.
 - [src/connectors/github.ts](src/connectors/github.ts) — reads roadmap/kpis; exposes the authenticated requester.
@@ -60,7 +61,7 @@ npm run lint
 
 - **Phase A**: Confluence → `status.md`. Built, then **parked** — Confluence is dormant. `confluence.ts` + the `status` kind remain; revive by re-adding the `status` producer to `orchestrator.ts`.
 - **Phase C+D (now, active producers)**: M365 Outlook → `emails.md` and Teams → `meetings.md`. Connectors built + unit-tested; **activate** by provisioning the Azure AD app + admin consent (`Mail.Read`, `OnlineMeetingTranscript.Read.All`) and setting `AZURE_*` secrets + `GRAPH_USER_ID`. Until then each producer no-ops.
-- **Phase B**: Slack connector → cross-signal (feeds status/notes; no dedicated input file).
-- **Phase E**: `weekly-digest.md` aggregation (dashboard's prompt 04) once ≥2 files are produced; + daily Claude-conversations source.
+- **Phase B (built, active)**: Slack `conversations.history` over tracked channels → `notes.md`. The dashboard's `classifyFile()` buckets any non-email/meeting/status `.md` as type `notes`, so Slack gets its own first-class input file (not folded into the parked `status`). Connector built + unit-tested; **activate** by setting `SLACK_BOT_TOKEN` (scopes `channels:history`/`groups:history`, bot invited to the channels) and filling `config/agent-config.json` → `slack.channels`. No-ops until both are present.
+- **Phase E**: `weekly-digest.md` aggregation (dashboard's prompt 04) once ≥2 files are produced; + daily Claude-conversations source (a second feeder into `notes.md`).
 
 See [roadmap-agent-implementation-plan.md](roadmap-agent-implementation-plan.md) for the original plan and `.claude/plans/` for the executed pivot plan.

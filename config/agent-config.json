@@ -25,6 +25,29 @@
     "go-live",
     "rollout"
   ],
+  "slack": {
+    "channels": [],
+    "keywords": [
+      "blocker",
+      "blocked",
+      "decision",
+      "go-live",
+      "rollout",
+      "settlement",
+      "reconciliation",
+      "juspay",
+      "checkout.com",
+      "opera",
+      "ohip",
+      "fraud",
+      "forter",
+      "loyalty",
+      "risk",
+      "slip",
+      "delay",
+      "sign-off"
+    ]
+  },
   "dashboard": {
     "roadmap": "data/roadmap.json",
     "kpis": "data/kpis.json",

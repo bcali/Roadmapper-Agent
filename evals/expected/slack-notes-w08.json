@@ -1,0 +1,4 @@
+{
+  "must_contain": ["FRAUD-001", "LAQ-001", "82.4%"],
+  "must_not_contain": ["[value]", "[YYYY", "[Name", "thai place", "lunch"]
+}

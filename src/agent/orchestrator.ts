@@ -11,6 +11,7 @@
  * Active producers:
  *   - emails   ← Outlook (MS Graph)   → emails.md
  *   - meetings ← Teams (MS Graph)     → meetings.md
+ *   - notes    ← Slack tracked chans  → notes.md
  * Parked (revive by re-adding to PRODUCERS):
  *   - status   ← Confluence           → status.md   (source currently dormant)
  *
@@ -23,6 +24,7 @@ import { commitInputFile } from "../connectors/dashboard-writer.ts";
 import { getGitHubClient, getOctokitRequester } from "../connectors/github.ts";
 import type { GraphConfig } from "../connectors/graph.ts";
 import { fetchRecentEmails } from "../connectors/outlook.ts";
+import { fetchRecentMessages } from "../connectors/slack.ts";
 import { fetchRecentTranscripts } from "../connectors/teams.ts";
 import { hoursAgoIso, runDateString } from "../lib/clock.ts";
 import { type AgentConfig, type Env, loadAgentConfig, loadEnv } from "../lib/config.ts";
@@ -59,6 +61,20 @@ function buildProducers(env: Env, config: AgentConfig): Producer[] {
     {
       kind: "meetings",
       collect: () => fetchRecentTranscripts(graphConfig(env), { sinceIso }),
+    },
+    {
+      kind: "notes",
+      collect: () =>
+        config.slack.channels.length === 0
+          ? Promise.resolve([])
+          : fetchRecentMessages(
+              { token: env.SLACK_BOT_TOKEN },
+              {
+                channels: config.slack.channels,
+                sinceIso,
+                keywords: config.slack.keywords,
+              },
+            ),
     },
   ];
 }

@@ -19,7 +19,7 @@
 import type { NormalizedSignal } from "../lib/types.ts";
 import { type MemoryBundle, sliceRecentLessons } from "./memory.ts";
 
-export type ExtractKind = "status" | "emails" | "meetings";
+export type ExtractKind = "status" | "emails" | "meetings" | "notes";
 
 const COMMON_RULES = `Hard rules:
 - Map every item to an epic ID from the roadmap snapshot when one applies. Use those exact IDs; never invent or reuse retired ones.
@@ -122,10 +122,41 @@ Produce this Markdown, in order:
 
 ${COMMON_RULES}`;
 
+const NOTES_SYSTEM = `You are a program-management analyst for "Operation Money Tree", Minor Hotels' payments-modernization program. Convert raw Slack chatter from the team's tracked channels into the program's weekly NOTES file. Chat is noisy and informal — extract only roadmap signal (decisions, blockers, status changes, timeline shifts, action items, risks). Ignore banter, logistics, and tooling/CI noise. Threads referenced by author IDs (e.g. U0123) are fine to attribute as-is.
+
+Produce this Markdown, in order:
+
+# Weekly Team Notes — <WEEK>
+
+## Source
+- channels covered, message count, date range, overall RAG (🟢/🟡/🔴) + one-line summary.
+
+## Decisions
+| Decision | Channel | Who | Workstream (epic id) |
+|---|---|---|---|
+
+## Blockers & Risks
+- **<blocker/risk>** (<epic id>) — owner, severity 🔴/🟡, status (new/unchanged/escalated/resolved).
+
+## Status Signals
+- per-workstream status change surfaced in chat (<epic id>): what changed.
+
+## Action Items
+- [ ] <action> — <owner> — <due/none>
+
+## Notable Threads
+- short summary of an important discussion, with epic id + channel.
+
+## Themes
+- 2-4 recurring themes/blockers across the channels.
+
+${COMMON_RULES}`;
+
 const SYSTEM_PROMPTS: Record<ExtractKind, string> = {
   status: STATUS_SYSTEM,
   emails: EMAILS_SYSTEM,
   meetings: MEETINGS_SYSTEM,
+  notes: NOTES_SYSTEM,
 };
 
 export function filenameFor(kind: ExtractKind): string {

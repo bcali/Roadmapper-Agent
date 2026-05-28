@@ -1,0 +1,50 @@
+{
+  "kind": "notes",
+  "week": "2026-W08",
+  "signals": [
+    {
+      "source": "slack",
+      "timestamp_utc": "2026-02-17T08:12:00Z",
+      "author": "U0BRIAN",
+      "ref": "slack:C0PAYENG:1739779920.0001",
+      "text": "Heads up — Forter is still not returning decisions for ~3% of beta transactions. Until that's resolved we can't sign off FRAUD-001. Treating this as a blocker for the ramp-up."
+    },
+    {
+      "source": "slack",
+      "timestamp_utc": "2026-02-18T03:40:00Z",
+      "author": "U0SEHBA",
+      "ref": "slack:C0PAYENG:1739850000.0002",
+      "text": "Decision from the Juspay sync: we will route TH + ID acquiring through local rails first (LAQ-001) before extending to the rest of APAC. Owner is me, target end of Feb."
+    },
+    {
+      "source": "slack",
+      "timestamp_utc": "2026-02-19T11:05:00Z",
+      "author": "U0PHAM",
+      "ref": "slack:C0ROLLOUT:1739963100.0003",
+      "text": "Beta auth rate held at 82.4% this week. SCALE-020 stabilization looking good, no new Opera guarantee errors since the mapping fix went in."
+    },
+    {
+      "source": "slack",
+      "timestamp_utc": "2026-02-19T14:30:00Z",
+      "author": "U0BRIAN",
+      "ref": "slack:C0ROLLOUT:1739975400.0004",
+      "text": "Action: someone needs to chase Checkout.com on the payout report discrepancy before Friday — still blocking reconciliation sign-off. I'll own it unless ops wants it."
+    },
+    {
+      "source": "slack",
+      "timestamp_utc": "2026-02-19T15:00:00Z",
+      "author": "U0DEV",
+      "ref": "slack:C0RANDOM:1739977200.0005",
+      "text": "anyone up for lunch at the thai place downstairs?"
+    }
+  ],
+  "roadmap": {
+    "epics": [
+      { "id": "FRAUD-001", "title": "Fraud & Decisioning (Forter)", "status": "in_progress" },
+      { "id": "LAQ-001", "title": "Local Acquiring", "status": "in_progress" },
+      { "id": "SCALE-020", "title": "Beta stabilization", "status": "in_progress" },
+      { "id": "OPERA-001", "title": "Opera Cloud / PMS Integration", "status": "in_progress" }
+    ]
+  },
+  "kpis": { "auth_rate": { "value": "82.4%", "target": "75%" } }
+}

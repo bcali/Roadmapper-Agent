@@ -3,6 +3,17 @@ import { resolve } from "node:path";
 import { z } from "zod";
 import "dotenv/config";
 
+/**
+ * Coerce empty-string inputs to `undefined` before running the inner schema.
+ *
+ * GitHub Actions resolves an unset secret/var to "" (not absent) when wired
+ * via `env: FOO: ${{ secrets.FOO }}`. Without this, `.email()` / `.url()` on
+ * an "unset" optional field would trip on "" and fail the whole env load.
+ * Wrap every optional env field with this so unset secrets cleanly no-op.
+ */
+const opt = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((v) => (v === "" ? undefined : v), schema.optional());
+
 const EnvSchema = z.object({
   ANTHROPIC_API_KEY: z.string().startsWith("sk-ant-", "ANTHROPIC_API_KEY must start with sk-ant-"),
   // Write target: the dashboard repo (agent commits input files here).
@@ -11,18 +22,18 @@ const EnvSchema = z.object({
   GITHUB_BRANCH: z.string().default("main"),
   // Confluence source (parked). Optional so unit tests / other-source runs don't require them;
   // the connector throws a clear error at call time when they're absent.
-  ATLASSIAN_EMAIL: z.string().email().optional(),
-  ATLASSIAN_API_TOKEN: z.string().optional(),
+  ATLASSIAN_EMAIL: opt(z.string().email()),
+  ATLASSIAN_API_TOKEN: opt(z.string()),
   // Microsoft 365 sources (Outlook + Teams). Optional until the Azure app + admin consent land.
-  AZURE_TENANT_ID: z.string().optional(),
-  AZURE_CLIENT_ID: z.string().optional(),
-  AZURE_CLIENT_SECRET: z.string().optional(),
-  GRAPH_USER_ID: z.string().optional(),
+  AZURE_TENANT_ID: opt(z.string()),
+  AZURE_CLIENT_ID: opt(z.string()),
+  AZURE_CLIENT_SECRET: opt(z.string()),
+  GRAPH_USER_ID: opt(z.string()),
   // Slack source (notes.md). Optional until a bot token + tracked channels are set;
   // the connector throws a clear error at call time when absent.
-  SLACK_BOT_TOKEN: z.string().optional(),
+  SLACK_BOT_TOKEN: opt(z.string()),
   TIMEZONE: z.string().default("Asia/Bangkok"),
-  SLACK_ALERTS_WEBHOOK: z.string().url().optional(),
+  SLACK_ALERTS_WEBHOOK: opt(z.string().url()),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

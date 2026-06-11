@@ -26,7 +26,7 @@
     "rollout"
   ],
   "slack": {
-    "channels": [],
+    "channels": ["C08U3BT219D"],
     "keywords": [
       "blocker",
       "blocked",

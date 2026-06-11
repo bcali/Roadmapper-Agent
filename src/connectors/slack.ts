@@ -84,6 +84,11 @@ export async function fetchRecentMessages(
   fetchImpl: FetchLike = fetch,
 ): Promise<Signal[]> {
   assertSlackConfig(cfg);
+  // Strip a stray BOM/whitespace that secret-management tooling can prepend
+  // (e.g. piping into `gh secret set` adds a U+FEFF), which would otherwise
+  // make the `Bearer <token>` header an invalid ByteString. trim() drops
+  // U+FEFF since it's ECMAScript WhiteSpace.
+  const token = cfg.token.trim();
   const oldest = String(Math.floor(new Date(opts.sinceIso).getTime() / 1000));
   const limit = String(opts.limit ?? 200);
   const out: Signal[] = [];
@@ -94,7 +99,7 @@ export async function fetchRecentMessages(
       const params: Record<string, string> = { channel, oldest, limit };
       if (cursor) params.cursor = cursor;
       const data = await slackGet<HistoryResponse>(
-        cfg.token,
+        token,
         "conversations.history",
         params,
         fetchImpl,

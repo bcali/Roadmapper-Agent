@@ -99,4 +99,21 @@ describe("fetchRecentMessages", () => {
       /Slack/,
     );
   });
+
+  // A leading U+FEFF (BOM) sneaks in when a token is piped into tooling like
+  // `gh secret set`; it would make the `Bearer <token>` header an invalid
+  // ByteString. The connector must sanitize before building the header.
+  it("strips a BOM/whitespace-wrapped token before building the auth header", async () => {
+    const fetchSpy = vi.fn().mockResolvedValueOnce(ok({ ok: true, messages: [] }));
+    await fetchRecentMessages(
+      { token: "﻿xoxb-bomtoken \n" },
+      { channels: ["C123"], sinceIso: "2026-02-01T00:00:00Z" },
+      fetchSpy as unknown as typeof fetch,
+    );
+    const init = fetchSpy.mock.calls[0]![1] as RequestInit;
+    const auth = (init.headers as Record<string, string>).Authorization;
+    expect(auth).toBe("Bearer xoxb-bomtoken");
+    // sanity: the raw BOM must not survive into the header
+    expect(auth).not.toContain("﻿");
+  });
 });
